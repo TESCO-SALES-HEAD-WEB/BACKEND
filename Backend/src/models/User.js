@@ -16,6 +16,10 @@ const userSchema = new mongoose.Schema(
       enum: ['Sales Head', 'Sales Coordinator', 'Sales Manager'],
       required: true,
     },
+    // Display-only designation shown on the Manager apps, set by the Sales Head
+    // in Manager Accounts. It does NOT change the role/portal — a Business
+    // Development Executive keeps the 'Sales Manager' role and the same portal.
+    designation: { type: String, trim: true, default: 'Manager' },
     password: { type: String, required: true, minlength: 6, select: false },
     // Forgot-password OTP flow
     resetOtp: { type: String, select: false },
@@ -52,6 +56,7 @@ userSchema.methods.toSafeJSON = function () {
     email: this.email,
     employeeId: this.employeeId,
     role: this.role,
+    designation: this.designation || 'Manager',
     lastLoginAt: this.lastLoginAt,
   };
 };

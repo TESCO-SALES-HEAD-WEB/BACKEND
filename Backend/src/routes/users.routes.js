@@ -12,6 +12,7 @@ const safe = (u) => ({
   email: u.email,
   employeeId: u.employeeId,
   role: u.role,
+  designation: u.designation || 'Manager',
   isActive: u.isActive,
   lastLoginAt: u.lastLoginAt,
 });
@@ -31,7 +32,7 @@ router.get('/', async (req, res) => {
 // POST /api/users  { name, email, employeeId?, role, password }  — create an account
 router.post('/', async (req, res) => {
   try {
-    const { name, email, employeeId, role, password } = req.body || {};
+    const { name, email, employeeId, role, password, designation } = req.body || {};
     if (!name || !email || !role || !password) {
       return res.status(400).json({ message: 'Name, email, role and password are required' });
     }
@@ -46,6 +47,8 @@ router.post('/', async (req, res) => {
       email: String(email).toLowerCase().trim(),
       employeeId: employeeId ? String(employeeId).trim() : undefined,
       role,
+      // Display-only designation (Manager Accounts). Defaults to 'Manager'.
+      designation: designation ? String(designation).trim() : 'Manager',
       password,
     });
     res.status(201).json(safe(user));
@@ -61,12 +64,13 @@ router.post('/', async (req, res) => {
 // Updates profile / login email / active status.
 router.put('/:id', async (req, res) => {
   try {
-    const { name, email, employeeId, isActive } = req.body || {};
+    const { name, email, employeeId, isActive, designation } = req.body || {};
     const setOps = {};
     const unsetOps = {};
     if (name !== undefined) setOps.name = String(name).trim();
     if (email !== undefined) setOps.email = String(email).toLowerCase().trim();
     if (isActive !== undefined) setOps.isActive = !!isActive;
+    if (designation !== undefined) setOps.designation = String(designation).trim() || 'Manager';
     if (employeeId !== undefined) {
       const v = employeeId ? String(employeeId).trim() : '';
       if (v) setOps.employeeId = v;
