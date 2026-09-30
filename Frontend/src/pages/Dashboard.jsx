@@ -149,6 +149,7 @@ export default function Dashboard() {
       warm: countLead((l) => S(l.status).includes('warm')),
       cold: countLead((l) => S(l.status).includes('cold')),
       lost: countLead((l) => S(l.status).includes('lost')),
+      overdueFollowups: fLeads.filter((l) => { if (l.followUpDone) return false; if (S(l.status).includes('junk')) return false; const t = new Date(l.followUp).getTime(); return !isNaN(t) && t < Date.now(); }).length,
       junk: countLead((l) => S(l.status).includes('junk')),
       // record-based overview counts (match the real modules)
       apptFixed: fAppts.filter((a) => !isVisit(a)).length,
@@ -291,7 +292,7 @@ export default function Dashboard() {
               <Card tone="card-purple" title="Quotation Send" value={m.quotationSend} subtitle="Awaiting response" icon={FileText} />
               <Card tone="card-emerald" title="Order Confirmed" value={m.orderConfirmed} subtitle="Successfully closed" icon={CheckCircle} />
               <Card tone="card-slate" title="Junk" value={m.junk} subtitle="Unqualified leads" icon={Trash2} />
-              <Card tone="card-rose" title="Lost" value={m.lost} subtitle="Unconverted leads" icon={XCircle} />
+              <Card tone="card-red" title="Overdue" value={m.overdueFollowups} subtitle="Follow-up passed" icon={Clock} />
             </div>
           </div>
 
@@ -335,7 +336,7 @@ export default function Dashboard() {
               <Card tone="card-red" title="Hot Leads" value={m.hot} subtitle="High conversion chance" icon={Flame} />
               <Card tone="card-orange" title="Warm Leads" value={m.warm} subtitle="Nurturing in progress" icon={Thermometer} />
               <Card tone="card-blue" title="Cold Leads" value={m.cold} subtitle="Need re-engagement" icon={Snowflake} />
-              <Card tone="card-orange" title="Lost Deal" value={m.lost} subtitle="Unsuccessful deals" icon={XCircle} />
+              <Card tone="card-red" title="Overdue" value={m.overdueFollowups} subtitle="Follow-up passed" icon={Clock} />
               <Card tone="card-slate" title="Junk" value={m.junk} subtitle="Unqualified leads" icon={Trash2} />
             </div>
           </div>
