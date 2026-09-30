@@ -245,6 +245,9 @@ export default function Login() {
                     </div>
                     <button type="submit" disabled={!email || !password} style={{ ...btnStyle, ...((!email || !password) ? { opacity: 0.55, cursor: 'not-allowed' } : {}) }} onMouseEnter={btnOver} onMouseLeave={btnOut}>Login to Dashboard</button>
                   </form>
+                  <p style={{ textAlign: 'center', marginTop: '1.25rem', fontSize: '0.8125rem', color: '#94A3B8' }}>
+                    <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer" style={{ color: '#64748B', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
+                  </p>
                 </>
               )}
 

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, Sparkles, Flame, Thermometer, Snowflake,
   CalendarCheck, FileText, CheckCircle, Trash2, XCircle,
-  ChevronDown, Activity, Edit2, Download, Trash, Edit3, Calendar
+  ChevronDown, Activity, Edit2, Download, Trash, Edit3, Calendar,
+  Phone, CheckCircle2, Clock
 } from 'lucide-react';
 import DateRangePicker from '../components/DateRangePicker';
 import ScopeFilter from '../components/ScopeFilter';
@@ -56,6 +57,24 @@ const fmtFollowUp = (v) => {
   return `${dateStr}, ${String(h).padStart(2, '0')}:${mm} ${ap}`;
 };
 
+// Convert a stored follow-up value into an absolute millisecond deadline.
+// When only a date was set (no time), end-of-day (23:59) is treated as the deadline.
+const followUpMillis = (v) => {
+  const p = parseFollowUp(v);
+  if (!p) return null;
+  const dt = new Date(`${p.dPart}T${p.tPart || '23:59'}`);
+  const ms = dt.getTime();
+  return isNaN(ms) ? null : ms;
+};
+
+// Build a tel: link from a phone value (digits only, keeps a leading +).
+const telHref = (v) => {
+  const s = String(v ?? '').trim();
+  if (!s) return '';
+  const cleaned = s.replace(/[^\d+]/g, '');
+  return cleaned ? `tel:${cleaned}` : '';
+};
+
 // Map the wizard's status option onto the exact table-status value stored on a lead
 const WIZARD_STATUS_TO_TABLE = {
   'New': 'New Lead', 'Hot': 'Hot Leads', 'Warm': 'Warm Leads', 'Cold': 'Cold Leads',
@@ -102,6 +121,42 @@ export default function Leads() {
     setLeadsData((prev) => prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)));
   };
 
+  // --- Follow-up / Overdue tracking (derived on the frontend; no API-shape changes) ---
+  // A ticking clock so an "Overdue" pill appears the moment a follow-up time passes,
+  // without needing a page refresh.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Derive a lead's follow-up state:
+  //   'completed' -> the call was made and recorded
+  //   'overdue'   -> the scheduled date/time has passed with no call recorded
+  //   'upcoming'  -> a follow-up is scheduled in the future
+  //   'none'      -> no follow-up date set
+  const getFollowUpState = (lead) => {
+    if (!lead) return 'none';
+    if (lead.followUpDone) return 'completed';
+    const ms = followUpMillis(lead.followUp);
+    if (ms == null) return 'none';
+    return ms < nowTick ? 'overdue' : 'upcoming';
+  };
+
+  // Record that the follow-up call was completed: clears Overdue, marks done, appends
+  // a history entry, and persists via the SAME mechanism used for other lead edits
+  // (local setLeadsData + api() PUT), so the change survives a refresh.
+  const markFollowUpDone = (id) => {
+    const now = new Date();
+    const ts = `${now.toLocaleDateString('en-GB')}, ${now.toLocaleTimeString('en-US', { hour12: false })}`;
+    const lead = leadsData.find((l) => l.id === id);
+    const newHistory = [...((lead && lead.history) || []), { timestamp: ts, message: 'Follow-up call completed' }];
+    const body = { followUpDone: true, followUpCompletedAt: ts, history: newHistory };
+    setLeadsData((prev) => prev.map((l) => (l.id === id ? { ...l, ...body } : l)));
+    api(`/leads/${id}`, { method: 'PUT', body }).catch(() => {});
+    showToast('Follow-up marked as completed', 'success');
+  };
+
   // Persist a lead created/edited via the multi-step wizard through the Head api() client
   const handleWizardSave = async (data) => {
     try {
@@ -123,6 +178,13 @@ export default function Leads() {
           followUp: data.followUp || 'Pending',
           _wizard: data._wizard,
         };
+        // Setting a NEW follow-up date/time starts a fresh cycle, so clear any prior
+        // "call completed" flag (a new call is now expected → it can go Overdue again).
+        const prevLead = leadsData.find((l) => l.id === id);
+        if (prevLead && prevLead.followUp !== body.followUp) {
+          body.followUpDone = false;
+          body.followUpCompletedAt = '';
+        }
         const updated = await api(`/leads/${id}`, { method: 'PUT', body });
         setLeadsData((prev) => prev.map((l) => (l.id === id ? { ...l, ...body, ...(updated || {}) } : l)));
         setWizardOpen(false);
@@ -765,7 +827,18 @@ export default function Leads() {
                 <td>{lead.location || '-'}</td>
                 <td>{lead.service || '-'}</td>
                 <td className="font-medium">{lead.value ?? lead.projectValue ?? '-'}</td>
-                <td className="text-muted">{lead.phone}</td>
+                <td className="text-muted" onClick={(e) => e.stopPropagation()}>
+                  {lead.phone ? (
+                    <a
+                      href={telHref(lead.phone)}
+                      title={`Call ${lead.phone}`}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--primary-color, #2563eb)', fontWeight: 600, textDecoration: 'none' }}
+                    >
+                      <Phone size={12} />
+                      {lead.phone}
+                    </a>
+                  ) : '-'}
+                </td>
                 <td className="text-muted">{lead.email || '-'}</td>
                 <td className="text-muted">{lead.city || '-'}</td>
                 <td className="text-muted">{lead.timeline ? String(lead.timeline).replace(/_/g, ' ') : '-'}</td>
@@ -857,7 +930,7 @@ export default function Leads() {
 
                 {/* Follow Up Column */}
                 <td>
-                  <div className="table-date-wrapper">
+                  <div className="table-date-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.35rem' }}>
                     <input
                       type="datetime-local"
                       className="table-date-input"
@@ -865,6 +938,46 @@ export default function Leads() {
                       defaultValue={toFollowUpInput(lead.followUp)}
                       onClick={(e) => e.stopPropagation()}
                     />
+                    {(() => {
+                      const st = getFollowUpState(lead);
+                      if (st === 'overdue') {
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }} onClick={(e) => e.stopPropagation()}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#FEE2E2', color: '#DC2626', fontSize: '0.7rem', fontWeight: 700, padding: '0.1rem 0.45rem', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                              <Clock size={11} /> Overdue
+                            </span>
+                            <button
+                              type="button"
+                              title="Mark follow-up call completed"
+                              onClick={(e) => { e.stopPropagation(); markFollowUpDone(lead.id); }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', background: '#DCFCE7', color: '#166534', border: 'none', fontSize: '0.7rem', fontWeight: 700, padding: '0.15rem 0.45rem', borderRadius: '999px', cursor: 'pointer' }}
+                            >
+                              <CheckCircle2 size={11} /> Done
+                            </button>
+                          </div>
+                        );
+                      }
+                      if (st === 'completed') {
+                        return (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#DCFCE7', color: '#166534', fontSize: '0.7rem', fontWeight: 700, padding: '0.1rem 0.45rem', borderRadius: '999px' }}>
+                            <CheckCircle2 size={11} /> Completed
+                          </span>
+                        );
+                      }
+                      if (st === 'upcoming') {
+                        return (
+                          <button
+                            type="button"
+                            title="Mark follow-up call completed"
+                            onClick={(e) => { e.stopPropagation(); markFollowUpDone(lead.id); }}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', background: 'transparent', color: 'var(--text-muted, #6b7280)', border: '1px solid var(--border-color, #e5e7eb)', fontSize: '0.7rem', fontWeight: 600, padding: '0.12rem 0.45rem', borderRadius: '999px', cursor: 'pointer' }}
+                          >
+                            <CheckCircle2 size={11} /> Mark done
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </td>
 

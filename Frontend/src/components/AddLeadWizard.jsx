@@ -221,6 +221,19 @@ const AddLeadWizard = ({ isOpen, onClose, onSave, editLead = null, managers = []
   const addMilestone = () => setForm((f) => ({ ...f, ocMilestones: [...f.ocMilestones, { term: '', percentage: '', value: '' }] }));
   const removeMilestone = (idx) => setForm((f) => ({ ...f, ocMilestones: f.ocMilestones.filter((_, i) => i !== idx) }));
 
+  // Tentative Start/Completion change → auto-derive read-only Lead Time Promised (in days).
+  const setDateField = (key, val) => setForm((f) => {
+    const next = { ...f, [key]: val };
+    const s = new Date(next.ocStartDate), e = new Date(next.ocCompletionDate);
+    if (next.ocStartDate && next.ocCompletionDate && !isNaN(s.getTime()) && !isNaN(e.getTime())) {
+      const days = Math.round((e - s) / 86400000);
+      next.ocLeadTime = days >= 0 ? `${days} days` : '';
+    } else {
+      next.ocLeadTime = '';
+    }
+    return next;
+  });
+
   const reset = () => { setForm(emptyForm); setStep(1); };
   const close = () => { reset(); onClose(); };
 
@@ -519,13 +532,13 @@ const AddLeadWizard = ({ isOpen, onClose, onSave, editLead = null, managers = []
               <SectionCard icon={CalendarDays} title="3. Timeline & Delivery Commitment">
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
                   <Field label="Tentative Start Date" required>
-                    <input type="date" style={inputStyle} value={form.ocStartDate} onChange={(e) => set('ocStartDate', e.target.value)} />
+                    <input type="date" style={inputStyle} value={form.ocStartDate} onChange={(e) => setDateField('ocStartDate', e.target.value)} />
                   </Field>
                   <Field label="Tentative Completion Date" required>
-                    <input type="date" style={inputStyle} value={form.ocCompletionDate} onChange={(e) => set('ocCompletionDate', e.target.value)} />
+                    <input type="date" style={inputStyle} min={form.ocStartDate || undefined} value={form.ocCompletionDate} onChange={(e) => setDateField('ocCompletionDate', e.target.value)} />
                   </Field>
                   <Field label="Lead Time Promised">
-                    <input style={inputStyle} placeholder="e.g. 30 days" value={form.ocLeadTime} onChange={(e) => set('ocLeadTime', e.target.value)} />
+                    <input style={{ ...inputStyle, backgroundColor: '#F8FAFC', cursor: 'not-allowed' }} placeholder="Auto-calculated" value={form.ocLeadTime} readOnly disabled />
                   </Field>
                 </div>
               </SectionCard>
