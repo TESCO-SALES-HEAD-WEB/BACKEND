@@ -1077,13 +1077,20 @@ export default function Leads() {
                 {/* Assign To Column */}
                 <td>
                   <div className="table-select-wrapper">
-                    <select className="table-select" defaultValue={lead.manager || 'Unassigned'} onClick={(e) => e.stopPropagation()}
+                    <select
+                      className="table-select"
+                      value={lead.manager || 'Unassigned'}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => { const v = e.target.value; setLeadsData(prev => prev.map(l => (l.id === lead.id ? { ...l, manager: v } : l))); api(`/leads/${lead.id}`, { method: 'PUT', body: { manager: v } }).catch(() => {}); }}
                     >
-                      <option value={lead.manager || 'Unassigned'}>{lead.manager || 'Unassigned'}</option>
+                      <option value="Unassigned">Unassigned</option>
                       {managers.map((m) => (
                         <option key={m.email || m.employeeId || m.name} value={m.name}>{m.name}</option>
                       ))}
+                      {/* Preserve an existing assignment whose name isn't in the current managers list */}
+                      {lead.manager && lead.manager !== 'Unassigned' && !managers.some((m) => m.name === lead.manager) && (
+                        <option value={lead.manager}>{lead.manager}</option>
+                      )}
                     </select>
                     <ChevronDown size={14} className="table-select-chevron" />
                   </div>

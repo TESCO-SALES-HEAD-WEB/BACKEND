@@ -307,9 +307,13 @@
   opacity: 0.8;
 }
 
+.action-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.97);
+}
 .btn-activity {
-  background: #1e1b4b;
-  color: #fff;
+  background: #ede9fe;
+  color: #7c3aed;
 }
 .btn-edit {
   background: #e0e7ff;
@@ -407,3 +411,60 @@
   top: 100%;
   margin-top: 0.5rem;
 }
+
+/* ── Overview metric cards (colorful KPI cards, matching the other apps) ── */
+.leads-overview .grid-5-col {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+@media (max-width: 1200px) { .leads-overview .grid-5-col { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 760px)  { .leads-overview .grid-5-col { grid-template-columns: repeat(2, 1fr); } }
+
+.metric-card {
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+.metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.metric-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+.metric-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+.metric-subtitle {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+/* Colored value numbers per card theme so the KPIs read as vivid, not flat */
+.card-blue    .metric-value { color: #0284c7; }
+.card-red     .metric-value { color: #dc2626; }
+.card-orange  .metric-value { color: #ea580c; }
+.card-slate   .metric-value { color: #475569; }
+.card-green   .metric-value { color: #16a34a; }
+.card-purple  .metric-value { color: #9333ea; }
+.card-emerald .metric-value { color: #059669; }
+.card-rose    .metric-value { color: #e11d48; }
+.card-indigo  .metric-value { color: #4f46e5; }
+.card-yellow  .metric-value { color: #ca8a04; }
+.card-cyan    .metric-value { color: #0891b2; }
