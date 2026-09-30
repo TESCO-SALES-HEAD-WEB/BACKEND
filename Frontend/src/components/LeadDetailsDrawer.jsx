@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Trash2, FileText } from 'lucide-react';
+import { X, FileText } from 'lucide-react';
 
 // Human-readable file size, e.g. "2.4 MB".
 const fmtBytes = (n) => {
@@ -21,6 +21,19 @@ export default function LeadDetailsDrawer({ isOpen, onClose, lead, initialTab = 
   }, [isOpen, initialTab]);
 
   if (!isOpen || !lead) return null;
+
+  // Real lead activity timeline from the shared record (same data the Coordinator shows).
+  // Normalise the entry shape (history is written as {timestamp,message,remark,user};
+  // some entries may use {date,event,meetingRemarks,by}) and show newest first.
+  const timelineItems = (Array.isArray(lead.history) ? lead.history : [])
+    .filter((h) => h && (h.message || h.event || h.remark || h.meetingRemarks))
+    .map((h) => ({
+      date: h.timestamp || h.date || '',
+      action: h.message || h.event || '',
+      remark: h.remark || h.meetingRemarks || '',
+      user: h.user || h.by || '',
+    }))
+    .reverse();
 
   return (
     <div className="ldd-overlay" onClick={onClose}>
@@ -49,7 +62,7 @@ export default function LeadDetailsDrawer({ isOpen, onClose, lead, initialTab = 
             className={`ldd-tab ${activeTab === 'timeline' ? 'active' : ''}`}
             onClick={() => setActiveTab('timeline')}
           >
-            Activity Timeline (2)
+            Activity Timeline ({timelineItems.length})
           </button>
         </div>
 
@@ -247,31 +260,26 @@ export default function LeadDetailsDrawer({ isOpen, onClose, lead, initialTab = 
             </div>
           ) : (
             <div className="ldd-timeline-container">
-              <div className="ldd-timeline-item">
-                <div className="ldd-timeline-icon yellow">
-                  <div className="ldd-icon-inner"></div>
-                </div>
-                <div className="ldd-timeline-card">
-                  <div className="ldd-timeline-date">18/07/2026, 16:34:26</div>
-                  <div className="ldd-timeline-action">Updated status to: WARM</div>
-                  <div className="ldd-timeline-remark">
-                    <span>Remark:</span> "23ertrewq"
+              {timelineItems.length === 0 ? (
+                <p className="ldd-empty-text">No activity recorded yet</p>
+              ) : (
+                timelineItems.map((h, i) => (
+                  <div className="ldd-timeline-item" key={i}>
+                    <div className="ldd-timeline-icon yellow">
+                      <div className="ldd-icon-inner"></div>
+                    </div>
+                    <div className="ldd-timeline-card">
+                      <div className="ldd-timeline-date">{h.date}{h.user ? ` — ${h.user}` : ''}</div>
+                      {h.action ? <div className="ldd-timeline-action">{h.action}</div> : null}
+                      {h.remark ? (
+                        <div className="ldd-timeline-remark">
+                          <span>Remark:</span> "{h.remark}"
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
-              </div>
-
-              <div className="ldd-timeline-item">
-                <div className="ldd-timeline-icon gray">
-                  <Trash2 size={12} />
-                </div>
-                <div className="ldd-timeline-card">
-                  <div className="ldd-timeline-date">18/07/2026, 16:34:21</div>
-                  <div className="ldd-timeline-action">Updated status to: JUNK</div>
-                  <div className="ldd-timeline-remark">
-                    <span>Remark:</span> "34tr32"
-                  </div>
-                </div>
-              </div>
+                ))
+              )}
             </div>
           )}
         </div>

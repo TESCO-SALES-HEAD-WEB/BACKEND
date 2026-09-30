@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Users, Sparkles, Flame, Thermometer, Snowflake,
   CalendarCheck, FileText, CheckCircle, Trash2, XCircle,
@@ -13,7 +13,7 @@ import LeadDetailsDrawer from '../components/LeadDetailsDrawer';
 import StatusUpdateModal from '../components/StatusUpdateModal';
 import GenerateQuotationModal from '../components/GenerateQuotationModal';
 import DesignRequirementModal from '../components/DesignRequirementModal';
-import { api } from '../api/client';
+import { api, getUser } from '../api/client';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import { showToast } from '../utils/toast';
 import { useViewMode } from '../context/ViewModeContext';
@@ -128,6 +128,9 @@ export default function Leads() {
     ));
   };
 
+  // Name of the acting user, recorded on activity-timeline entries this Head creates.
+  const currentUserName = () => { const u = getUser && getUser(); return (u && (u.name || u.email)) || 'Sales Head'; };
+
   // --- Follow-up / Overdue tracking (derived on the frontend; no API-shape changes) ---
   // A ticking clock so an "Overdue" pill appears the moment a follow-up time passes,
   // without needing a page refresh.
@@ -136,6 +139,9 @@ export default function Leads() {
     const t = setInterval(() => setNowTick(Date.now()), 30000);
     return () => clearInterval(t);
   }, []);
+
+  // Leads already surfaced in an in-app overdue reminder this session (dedupe once each).
+  const remindedRef = useRef(new Set());
 
   // Derive a lead's follow-up state:
   //   'completed' -> the call was made and recorded
@@ -150,6 +156,20 @@ export default function Leads() {
     return ms < nowTick ? 'overdue' : 'upcoming';
   };
 
+  // In-app reminder: when a scheduled follow-up call becomes overdue, toast it once per
+  // session (frontend-only; no backend). Naming up to 3 leads, with "+N more" beyond that.
+  useEffect(() => {
+    const overdue = leadsData.filter(
+      (l) => getFollowUpState(l) === 'overdue' && !String(l.status || '').toLowerCase().includes('junk')
+    );
+    const fresh = overdue.filter((l) => !remindedRef.current.has(l.id));
+    if (fresh.length === 0) return;
+    fresh.forEach((l) => remindedRef.current.add(l.id));
+    const names = fresh.slice(0, 3).map((l) => l.name || l.id).join(', ');
+    const extra = fresh.length > 3 ? ` +${fresh.length - 3} more` : '';
+    showToast(`Follow-up call due: ${names}${extra}`, 'info');
+  }, [leadsData, nowTick]);
+
   // Record that the follow-up call was completed: clears Overdue, marks done, appends
   // a history entry, and persists via the SAME mechanism used for other lead edits
   // (local setLeadsData + api() PUT), so the change survives a refresh.
@@ -157,7 +177,7 @@ export default function Leads() {
     const now = new Date();
     const ts = `${now.toLocaleDateString('en-GB')}, ${now.toLocaleTimeString('en-US', { hour12: false })}`;
     const lead = leadsData.find((l) => l.id === id);
-    const newHistory = [...((lead && lead.history) || []), { timestamp: ts, message: 'Follow-up call completed' }];
+    const newHistory = [...((lead && lead.history) || []), { timestamp: ts, message: 'Follow-up call completed', user: currentUserName() }];
     const body = { followUpDone: true, followUpCompletedAt: ts, history: newHistory };
     setLeadsData((prev) => prev.map((l) => (l.id === id ? { ...l, ...body } : l)));
     api(`/leads/${id}`, { method: 'PUT', body }).catch(() => {});
@@ -249,11 +269,11 @@ export default function Leads() {
     const history = [...((lead && lead.history) || [])];
     let body;
     if (fuNoFurther) {
-      history.push({ timestamp: ts, message: 'Follow-up completed — no further follow-up', remark });
+      history.push({ timestamp: ts, message: 'Follow-up completed — no further follow-up', remark, user: currentUserName() });
       body = { followUpDone: true, followUpCompletedAt: ts, history };
     } else {
       const value = `${fuDate}T${fuTime}`;
-      history.push({ timestamp: ts, message: `Follow-up scheduled for: ${fmtFollowUp(value)}`, remark });
+      history.push({ timestamp: ts, message: `Follow-up scheduled for: ${fmtFollowUp(value)}`, remark, user: currentUserName() });
       body = { followUp: value, followUpDone: false, followUpCompletedAt: '', history };
     }
     setLeadsData((prev) => prev.map((l) => (l.id === id ? { ...l, ...body } : l)));
