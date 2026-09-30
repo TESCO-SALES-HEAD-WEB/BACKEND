@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, FileText } from 'lucide-react';
+
+// Human-readable file size, e.g. "2.4 MB".
+const fmtBytes = (n) => {
+  const b = Number(n) || 0;
+  if (!b) return '';
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / (1024 * 1024)).toFixed(1)} MB`;
+};
 import './LeadDetailsDrawer.css';
 
 export default function LeadDetailsDrawer({ isOpen, onClose, lead, initialTab = 'specifications' }) {
@@ -213,7 +222,26 @@ export default function LeadDetailsDrawer({ isOpen, onClose, lead, initialTab = 
 
               <div className="ldd-card">
                 <h3 className="ldd-card-title">Attached Files</h3>
-                <p className="ldd-empty-text">No files attached to this lead</p>
+                {Array.isArray(lead?.attachments) && lead.attachments.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {lead.attachments.map((f, i) => (
+                      <a
+                        key={f.publicId || f.url || i}
+                        href={f.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.65rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', textDecoration: 'none' }}
+                        title={`Open ${f.name}`}
+                      >
+                        <FileText size={16} color="#6366f1" style={{ flexShrink: 0 }} />
+                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1e293b', fontSize: '0.85rem', fontWeight: 600 }}>{f.name || 'File'}</span>
+                        {fmtBytes(f.size) && <span style={{ fontSize: '0.72rem', color: '#94a3b8', flexShrink: 0 }}>{fmtBytes(f.size)}</span>}
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="ldd-empty-text">No files attached to this lead</p>
+                )}
               </div>
               
             </div>

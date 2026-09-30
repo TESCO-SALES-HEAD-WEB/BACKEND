@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Check, CalendarDays, FileText, LayoutList, UploadCloud, ChevronDown } from 'lucide-react';
+import { X, Check, CalendarDays, FileText, LayoutList, UploadCloud, ChevronDown, Trash2 } from 'lucide-react';
 import { api } from '../api/client';
 import { showToast } from '../utils/toast';
+import { uploadManyToCloudinary, isUploadConfigured, formatBytes } from '../utils/cloudinary';
 import './AddLeadModal.css';
 
 // ── Edit-mode option sets (match the Leads table dropdowns exactly) ──
@@ -91,7 +92,7 @@ const coordinatorSteps = [
   { id: 5, label: 'Review' }
 ];
 
-export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLead = null, managers = [], onSaved }) {
+export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLead = null, managers = [], onSaved, onReload, onCreateQuotation }) {
   const isEdit = !!editLead;
 
   // ── Edit-mode form state (prefilled from the selected lead) ──
@@ -147,6 +148,7 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
       designReq: editForm.designReq,
       followUp: editForm.followUp,
       notes: editForm.notes,
+      attachments,
     };
     setSaving(true);
     try {
@@ -250,6 +252,27 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
           <label className="form-label">Notes</label>
           <textarea className="form-input" rows="3" placeholder="Add notes..." value={editForm.notes} onChange={(e) => setEF('notes', e.target.value)}></textarea>
         </div>
+
+        <div className="form-group" style={{ gridColumn: 'span 2' }}>
+          <label className="form-label">Attachments</label>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.dwg,.dxf"
+              style={{ display: 'none' }}
+              onChange={(e) => { handleFilesPicked(e.target.files); e.target.value = ''; }}
+            />
+            <button type="button" className="btn btn--secondary" style={{ padding: '0.5rem 1rem' }} disabled={uploading} onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+              {uploading ? 'Uploading…' : 'Add file'}
+            </button>
+            <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+              {attachments.length ? `${attachments.length} file${attachments.length > 1 ? 's' : ''} attached` : 'No files attached'}
+            </span>
+          </div>
+          {renderAttachmentList()}
+        </div>
       </div>
     </>
   );
@@ -275,9 +298,9 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
   ];
 
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState('APPOINTMENT FIXED');
+  const [selectedStatus, setSelectedStatus] = useState('NEW');
   const statusOptions = [
-    'NEW', 'HOT', 'WARM', 'COLD', 'APPOINTMENT FIXED', 
+    'NEW', 'HOT', 'WARM', 'COLD', 'APPOINTMENT FIXED',
     'QUOTATION SEND', 'ORDER CONFIRMED', 'JUNK', 'LOST'
   ];
 
@@ -286,6 +309,122 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
   const [expectedTimeline, setExpectedTimeline] = useState('Select Expected Timeline');
   const [step3Service, setStep3Service] = useState('PEB Building');
   const [quotationType, setQuotationType] = useState('Initial Quotation');
+
+  // ── CREATE-MODE Basic Info (controlled) ──
+  // These inputs were previously unbound (no value/onChange), so "Save Lead" had
+  // nothing to persist — a new lead was never created and never appeared in the list.
+  const [newForm, setNewForm] = useState({
+    name: '', company: '', phone: '', email: '', location: '',
+    manager: 'Unassigned', followUp: '',
+  });
+  const setNF = (k, v) => setNewForm((f) => ({ ...f, [k]: v }));
+
+  // ── File attachments (uploaded directly to Cloudinary, stored on the lead) ──
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // In edit mode, start from the lead's existing attachments.
+  useEffect(() => {
+    setAttachments(Array.isArray(editLead?.attachments) ? editLead.attachments : []);
+  }, [editLead]);
+
+  // Upload one or more picked files and append the results to the attachments list.
+  const handleFilesPicked = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    if (!isUploadConfigured()) {
+      showToast('File upload is not set up yet. Add your Cloudinary keys to the app config.', 'error');
+      return;
+    }
+    setUploading(true);
+    try {
+      const { ok, errors } = await uploadManyToCloudinary(files);
+      if (ok.length) {
+        setAttachments((prev) => [...prev, ...ok]);
+        showToast(`${ok.length} file${ok.length > 1 ? 's' : ''} uploaded`, 'success');
+      }
+      if (errors.length) showToast(errors.join(' · '), 'error');
+    } catch (e) {
+      showToast(e.message || 'Upload failed', 'error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAttachment = (idx) => setAttachments((prev) => prev.filter((_, i) => i !== idx));
+
+  // Uploaded-files list (shown under any upload control). Files open in a new tab.
+  const renderAttachmentList = () => {
+    if (!attachments.length) return null;
+    return (
+      <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+        {attachments.map((f, i) => (
+          <div key={f.publicId || f.url || i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 0.6rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+            <FileText size={16} color="#6366f1" style={{ flexShrink: 0 }} />
+            <a href={f.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1e293b', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }} title={f.name}>
+              {f.name}
+            </a>
+            {f.size ? <span style={{ fontSize: '0.72rem', color: '#94a3b8', flexShrink: 0 }}>{formatBytes(f.size)}</span> : null}
+            <button type="button" onClick={() => removeAttachment(i)} title="Remove" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'inline-flex', padding: 0, flexShrink: 0 }}>
+              <Trash2 size={15} />
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Map the create-form status label onto the exact status value the leads table stores.
+  const CREATE_STATUS_MAP = {
+    'NEW': 'New Lead', 'HOT': 'Hot Leads', 'WARM': 'Warm Leads', 'COLD': 'Cold Leads',
+    'APPOINTMENT FIXED': 'Appointment Fixed', 'QUOTATION SEND': 'Quotation Send',
+    'ORDER CONFIRMED': 'Order Confirmed', 'JUNK': 'Junk', 'LOST': 'Lost',
+  };
+
+  // Persist a brand-new lead to the shared CRM backend, then refresh the list.
+  // When openQuote is true (the "Save & Create Quotation" button), the parent is
+  // asked to open the quotation screen for the freshly-created lead.
+  const handleCreate = async (openQuote = false) => {
+    if (!newForm.name.trim()) { showToast('Customer name is required', 'error'); return; }
+    if (!newForm.phone.trim()) { showToast('Phone number is required', 'error'); return; }
+    const svc = selectedService === 'Other roofing'
+      ? ((selectedRoofing && selectedRoofing !== 'Select Roofing Type') ? selectedRoofing : 'Other roofing')
+      : selectedService;
+    const body = {
+      name: newForm.name.trim(),
+      company: newForm.company.trim(),
+      phone: newForm.phone.trim(),
+      email: newForm.email.trim(),
+      source: leadSource,
+      service: svc,
+      projectType: selectedService,
+      location: newForm.location.trim(),
+      budget: viewMode === 'manager' ? budgetRange : '',
+      manager: newForm.manager || 'Unassigned',
+      priority: 'Medium',
+      status: CREATE_STATUS_MAP[selectedStatus] || 'New Lead',
+      timeline: (expectedTimeline && expectedTimeline !== 'Select Expected Timeline') ? expectedTimeline : '',
+      followUp: newForm.followUp.trim() || 'Pending',
+      attachments,
+      type: 'new leads',
+    };
+    setSaving(true);
+    try {
+      const created = await api('/leads', { method: 'POST', body });
+      showToast('Lead created successfully', 'success');
+      // Prefer a full refresh (backend assigns the LD-#### id) so the new lead
+      // appears immediately; fall back to inserting the returned lead.
+      if (onReload) onReload();
+      else if (onSaved && created && created.id) onSaved(created);
+      if (openQuote && created && created.id && onCreateQuotation) onCreateQuotation(created);
+      if (onClose) onClose();
+    } catch (e) {
+      showToast(e.message || 'Failed to create lead', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const toggleService = (service) => {
     setSelectedService(service);
@@ -322,20 +461,20 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
       <div className="form-grid">
         <div className="form-group">
           <label className="form-label">Customer Name <span className="required-asterisk">*</span></label>
-          <input type="text" className="form-input" placeholder="Enter customer name" />
+          <input type="text" className="form-input" placeholder="Enter customer name" value={newForm.name} onChange={(e) => setNF('name', e.target.value)} />
         </div>
         <div className="form-group">
           <label className="form-label">Company Name</label>
-          <input type="text" className="form-input" placeholder="Enter company name" />
+          <input type="text" className="form-input" placeholder="Enter company name" value={newForm.company} onChange={(e) => setNF('company', e.target.value)} />
         </div>
-        
+
         <div className="form-group">
           <label className="form-label">Phone Number <span className="required-asterisk">*</span></label>
-          <input type="text" className="form-input" placeholder="Enter phone number" />
+          <input type="text" className="form-input" placeholder="Enter phone number" value={newForm.phone} onChange={(e) => setNF('phone', e.target.value)} />
         </div>
         <div className="form-group">
           <label className="form-label">Email Address</label>
-          <input type="email" className="form-input" placeholder="Enter email address" />
+          <input type="email" className="form-input" placeholder="Enter email address" value={newForm.email} onChange={(e) => setNF('email', e.target.value)} />
         </div>
 
         <div className="form-group">
@@ -416,12 +555,14 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
 
         <div className="form-group">
           <label className="form-label">Project Location</label>
-          <input type="text" className="form-input" placeholder="Enter project location" />
+          <input type="text" className="form-input" placeholder="Enter project location" value={newForm.location} onChange={(e) => setNF('location', e.target.value)} />
         </div>
         <div className="form-group">
-          <label className="form-label">Assigned Manager <span className="required-asterisk">*</span></label>
-          <input type="text" className="form-input" defaultValue="Sarah Smith" disabled={viewMode === 'manager'} />
-          {viewMode === 'manager' && <span className="error-text">Fixed: Only Sales Coordinator can change executive</span>}
+          <label className="form-label">Assigned Manager</label>
+          <select className="form-input" value={newForm.manager} onChange={(e) => setNF('manager', e.target.value)}>
+            <option value="Unassigned">Unassigned</option>
+            {managers.map((m) => <option key={m.email || m.employeeId || m.name} value={m.name}>{m.name}</option>)}
+          </select>
         </div>
 
         {viewMode === 'manager' && (
@@ -449,7 +590,7 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
         <div className="form-group">
           <label className="form-label">Next Follow-up Date</label>
           <div className="input-with-icon">
-            <input type="text" className="form-input" placeholder="dd/mm/yyyy" />
+            <input type="date" className="form-input" value={newForm.followUp} onChange={(e) => setNF('followUp', e.target.value)} />
             <CalendarDays size={16} className="input-icon-right" />
           </div>
         </div>
@@ -601,14 +742,23 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
 
         <div className="form-group" style={{ gridColumn: viewMode === 'manager' ? 'span 1' : 'span 2' }}>
           <label className="form-label">Upload File (PDF)</label>
-          {viewMode === 'manager' ? (
-            <input type="text" className="form-input" placeholder="Choose file..." disabled />
-          ) : (
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              <button className="btn btn--secondary" style={{ padding: '0.5rem 1rem' }}>Choose file</button>
-              <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>No file chosen</span>
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.dwg,.dxf"
+              style={{ display: 'none' }}
+              onChange={(e) => { handleFilesPicked(e.target.files); e.target.value = ''; }}
+            />
+            <button type="button" className="btn btn--secondary" style={{ padding: '0.5rem 1rem' }} disabled={uploading} onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+              {uploading ? 'Uploading…' : 'Choose file'}
+            </button>
+            <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+              {attachments.length ? `${attachments.length} file${attachments.length > 1 ? 's' : ''} attached` : 'No file chosen'}
+            </span>
+          </div>
+          {renderAttachmentList()}
         </div>
       </div>
     </>
@@ -619,12 +769,29 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
       return (
         <>
           <h3 className="step-title">Project Attachments</h3>
-          <div className="drag-drop-zone">
+          <div
+            className="drag-drop-zone"
+            onDragOver={(e) => { e.preventDefault(); }}
+            onDrop={(e) => { e.preventDefault(); handleFilesPicked(e.dataTransfer.files); }}
+          >
             <UploadCloud size={48} className="drag-drop-icon" strokeWidth={1.5} />
             <h4 className="drag-drop-title">Drag and drop files here</h4>
             <p className="drag-drop-subtitle">Supports Site Photos, CAD drawings, BOQ spreadsheets, Soil reports, and PDFs up to 50MB</p>
-            <button className="btn btn--secondary">Select Files (Simulate Upload)</button>
-            <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '2rem'}}>No files uploaded yet. Click above to simulate an upload.</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,image/*,.doc,.docx,.xls,.xlsx,.dwg,.dxf"
+              style={{ display: 'none' }}
+              onChange={(e) => { handleFilesPicked(e.target.files); e.target.value = ''; }}
+            />
+            <button type="button" className="btn btn--secondary" disabled={uploading} onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+              {uploading ? 'Uploading…' : 'Select Files'}
+            </button>
+            {!attachments.length && (
+              <p style={{fontSize: '0.75rem', color: '#94a3b8', marginTop: '2rem'}}>No files uploaded yet.</p>
+            )}
+            <div style={{ width: '100%', marginTop: attachments.length ? '1rem' : 0 }}>{renderAttachmentList()}</div>
           </div>
         </>
       );
@@ -1019,7 +1186,7 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
         <div className="modal-footer">
           <div className="footer-left">
             <button className="btn btn--secondary" onClick={onClose}>Cancel</button>
-            <button className="btn btn-draft">Save Draft</button>
+            <button className="btn btn-draft" disabled={saving} onClick={() => handleCreate(false)}>Save Draft</button>
           </div>
           <div className="footer-right">
             {currentStep > 1 && (
@@ -1029,8 +1196,8 @@ export default function AddLeadModal({ viewMode = 'coordinator', onClose, editLe
               <button className="btn btn--primary" style={viewMode === 'manager' ? {backgroundColor: '#1e1b4b'} : {}} onClick={handleNext}>Next &rarr;</button>
             ) : (
               <>
-                <button className="btn btn--primary" style={{backgroundColor: '#1e1b4b'}} onClick={onClose}>Save Lead</button>
-                <button className="btn btn--primary" style={{backgroundColor: '#6366f1', color: 'white'}} onClick={onClose}>Save & Create Quotation</button>
+                <button className="btn btn--primary" style={{backgroundColor: '#1e1b4b'}} disabled={saving} onClick={() => handleCreate(false)}>{saving ? 'Saving…' : 'Save Lead'}</button>
+                <button className="btn btn--primary" style={{backgroundColor: '#6366f1', color: 'white'}} disabled={saving} onClick={() => handleCreate(true)}>Save & Create Quotation</button>
               </>
             )}
           </div>

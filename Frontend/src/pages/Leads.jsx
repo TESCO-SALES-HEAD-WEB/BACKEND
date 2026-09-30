@@ -116,9 +116,16 @@ export default function Leads() {
   const [junkReason, setJunkReason] = useState('');
   const [junkSaving, setJunkSaving] = useState(false);
 
-  // Merge an edited lead back into the list after a successful save
+  // Merge a saved lead back into the list. Upsert: update it in place if it already
+  // exists, otherwise insert a newly-created lead at the top (so an added lead shows
+  // immediately without waiting for the next auto-refresh).
   const handleLeadSaved = (updated) => {
-    setLeadsData((prev) => prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)));
+    if (!updated || !updated.id) return;
+    setLeadsData((prev) => (
+      prev.some((l) => l.id === updated.id)
+        ? prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l))
+        : [updated, ...prev]
+    ));
   };
 
   // --- Follow-up / Overdue tracking (derived on the frontend; no API-shape changes) ---
@@ -660,7 +667,10 @@ export default function Leads() {
   // Manager View scopes to the selected manager (matching a real Manager account);
   // Coordinator View is org-wide (matching a real Coordinator account).
   const scopeMgr = viewMode === 'manager' ? manager : 'all';
-  const managerLeads = scopeMgr === 'all' ? leadsData : leadsData.filter(l => l.manager === scopeMgr);
+  // Compare the assigned manager case/space-insensitively so the Head's Manager View
+  // shows exactly the leads that manager sees in their own portal (which matches loosely).
+  const sameMgr = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  const managerLeads = scopeMgr === 'all' ? leadsData : leadsData.filter(l => sameMgr(l.manager, scopeMgr));
 
   // A lead is in the picked calendar range (inclusive). Undated leads are never hidden.
   const inSelectedRange = (v) => {
@@ -702,7 +712,7 @@ export default function Leads() {
   };
   // Scope every KPI to the chosen calendar range so the overview numbers match the table.
   const rangeLeads = managerLeads.filter(l => inSelectedRange(l.date || l.createdAt));
-  const myApptRecords = apptRecords.filter(a => (scopeMgr === 'all' || (a.manager || '') === scopeMgr) && inSelectedRange(a.date || a.createdAt));
+  const myApptRecords = apptRecords.filter(a => (scopeMgr === 'all' || sameMgr(a.manager, scopeMgr)) && inSelectedRange(a.date || a.createdAt));
   const myLeadIdSet = new Set(rangeLeads.map(l => l.id));
   const totalLeads = rangeLeads.length;
   const newLeadsCount = rangeLeads.filter(l => isNewStatus(l.status)).length;
@@ -1101,6 +1111,8 @@ export default function Leads() {
           editLead={editLead}
           managers={managers}
           onSaved={handleLeadSaved}
+          onReload={loadLeadsAll}
+          onCreateQuotation={(lead) => { setSelectedQuotationLead(lead); setIsQuotationModalOpen(true); }}
           onClose={() => { setIsAddLeadModalOpen(false); setEditLead(null); }}
         />
       )}
