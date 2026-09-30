@@ -65,6 +65,30 @@ router.get('/managers', async (req, res) => {
   }
 });
 
+// POST /api/auth/push-token  (protected) — register this device's Expo push token
+router.post('/push-token', protect, async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token || typeof token !== 'string') return res.status(400).json({ success: false, message: 'token is required' });
+    await User.updateOne({ _id: req.user._id }, { $addToSet: { pushTokens: token } });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// DELETE /api/auth/push-token  (protected) — unregister on logout
+router.delete('/push-token', protect, async (req, res) => {
+  try {
+    const { token } = req.body || {};
+    if (!token) return res.status(400).json({ success: false, message: 'token is required' });
+    await User.updateOne({ _id: req.user._id }, { $pull: { pushTokens: token } });
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // POST /api/auth/logout  (protected)
 // JWT is stateless: client removes the token. Endpoint exists to record
 // the event and as a hook for future token blacklisting.

@@ -2,6 +2,7 @@
 // Manager and Coordinator login accounts (create / update / reset password / activate).
 const router = require('express').Router();
 const User = require('../models/User');
+const { syncUserName } = require('../utils/syncUserName');
 
 const ALLOWED_ROLES = ['Sales Manager', 'Sales Coordinator', 'Sales Head'];
 
@@ -75,8 +76,22 @@ router.put('/:id', async (req, res) => {
     if (Object.keys(setOps).length) update.$set = setOps;
     if (Object.keys(unsetOps).length) update.$unset = unsetOps;
 
+    // Capture the previous name before the update so a rename can be propagated
+    // retroactively to every record that references this person by name.
+    const prev = setOps.name !== undefined
+      ? await User.findById(req.params.id).select('name')
+      : null;
+
     const user = await User.findByIdAndUpdate(req.params.id, update, { new: true, runValidators: true });
     if (!user) return res.status(404).json({ message: 'Account not found' });
+
+    // Renaming a Manager/Coordinator here must update their old leads, appointments,
+    // payments, etc. across the shared salescrm DB (records store the display name).
+    if (prev && user.name && user.name !== prev.name) {
+      await syncUserName(prev.name, user.name).catch((e) =>
+        console.warn('[users] name sync failed:', e && e.message)
+      );
+    }
     res.json(safe(user));
   } catch (err) {
     if (err && err.code === 11000) {
