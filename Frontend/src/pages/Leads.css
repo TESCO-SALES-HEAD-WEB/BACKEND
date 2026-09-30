@@ -324,32 +324,57 @@
   color: #dc2626;
 }
 
-/* Notes Cell — roomy, multi-line and readable for longer remarks */
+/* Notes Cell — compact preview in the table; full text opens in a popup */
 .notes-cell {
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
-  gap: 0.5rem;
-  cursor: text;
-  min-width: 240px;
-  max-width: 320px;
+  gap: 2px;
+  max-width: 160px;
+}
+
+.notes-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 160px;
 }
 
 .notes-text {
-  flex: 1;
-  max-width: 300px;
+  max-width: 132px;
   overflow: hidden;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .notes-edit-icon {
   color: #cbd5e1;
   flex-shrink: 0;
-  margin-top: 2px;
+  cursor: pointer;
+}
+
+.notes-view-more {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--primary-color, #2563eb);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notes-add-btn {
+  background: none;
+  border: 1px dashed var(--border, #cbd5e1);
+  border-radius: 6px;
+  padding: 0.2rem 0.5rem;
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 .leads-advanced-filters {
   display: flex;
