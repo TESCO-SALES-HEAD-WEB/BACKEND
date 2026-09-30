@@ -27,9 +27,13 @@ function AccountsManager({ role, label }) {
   const [msg, setMsg] = useState(null); // { type, text }
   const [busy, setBusy] = useState(false);
 
-  const [form, setForm] = useState({ name: '', email: '', employeeId: '', password: '', confirm: '' });
+  // Designation is a display-only role label — shown/editable for Manager accounts only.
+  const isManager = role === 'Sales Manager';
+  const DESIGNATIONS = ['Manager', 'Business Development Executive'];
+
+  const [form, setForm] = useState({ name: '', email: '', employeeId: '', password: '', confirm: '', designation: 'Manager' });
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', email: '', employeeId: '' });
+  const [editForm, setEditForm] = useState({ name: '', email: '', employeeId: '', designation: 'Manager' });
   const [pwId, setPwId] = useState(null);
   const [pwForm, setPwForm] = useState({ newPassword: '', confirm: '' });
 
@@ -57,19 +61,19 @@ function AccountsManager({ role, label }) {
     if (form.password !== form.confirm) return flash('error', 'Passwords do not match');
     setBusy(true);
     try {
-      await api('/users', { method: 'POST', body: { name: form.name, email: form.email, employeeId: form.employeeId, role, password: form.password } });
+      await api('/users', { method: 'POST', body: { name: form.name, email: form.email, employeeId: form.employeeId, role, password: form.password, ...(isManager ? { designation: form.designation } : {}) } });
       flash('success', `${label} account created`);
-      setForm({ name: '', email: '', employeeId: '', password: '', confirm: '' });
+      setForm({ name: '', email: '', employeeId: '', password: '', confirm: '', designation: 'Manager' });
       load();
     } catch (e) { flash('error', e.message); } finally { setBusy(false); }
   };
 
-  const startEdit = (u) => { setEditingId(u.id); setPwId(null); setEditForm({ name: u.name || '', email: u.email || '', employeeId: u.employeeId || '' }); };
+  const startEdit = (u) => { setEditingId(u.id); setPwId(null); setEditForm({ name: u.name || '', email: u.email || '', employeeId: u.employeeId || '', designation: u.designation || 'Manager' }); };
   const saveEdit = async (id) => {
     if (!editForm.name.trim() || !editForm.email.trim()) return flash('error', 'Name and email are required');
     setBusy(true);
     try {
-      await api(`/users/${id}`, { method: 'PUT', body: { name: editForm.name, email: editForm.email, employeeId: editForm.employeeId } });
+      await api(`/users/${id}`, { method: 'PUT', body: { name: editForm.name, email: editForm.email, employeeId: editForm.employeeId, ...(isManager ? { designation: editForm.designation } : {}) } });
       flash('success', 'Account updated');
       setEditingId(null);
       load();
@@ -123,6 +127,13 @@ function AccountsManager({ role, label }) {
             <Field label="Full Name"><input className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Enter name" /></Field>
             <Field label="Login Email (username)"><input className="form-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="name@company.com" /></Field>
             <Field label="Employee ID (optional)"><input className="form-input" value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })} placeholder="EMP-..." /></Field>
+            {isManager && (
+              <Field label="Designation / Role">
+                <select className="form-input" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })}>
+                  {DESIGNATIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </Field>
+            )}
             <Field label="Password"><input className="form-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Min 8 characters" /></Field>
             <Field label="Confirm Password"><input className="form-input" type="password" value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} placeholder="Re-enter password" /></Field>
             <div><button type="submit" className="btn btn--primary" disabled={busy} style={{ width: '100%' }}><Plus size={16} /> Create</button></div>
@@ -139,15 +150,16 @@ function AccountsManager({ role, label }) {
                 <th style={th}>Name</th>
                 <th style={th}>Login Email</th>
                 <th style={th}>Employee ID</th>
+                {isManager && <th style={th}>Designation</th>}
                 <th style={th}>Status</th>
                 <th style={{ ...th, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td style={td} colSpan={5}>Loading…</td></tr>
+                <tr><td style={td} colSpan={isManager ? 6 : 5}>Loading…</td></tr>
               ) : users.length === 0 ? (
-                <tr><td style={{ ...td, textAlign: 'center', color: '#94A3B8', padding: '2rem' }} colSpan={5}>No {label} accounts yet. Create one above.</td></tr>
+                <tr><td style={{ ...td, textAlign: 'center', color: '#94A3B8', padding: '2rem' }} colSpan={isManager ? 6 : 5}>No {label} accounts yet. Create one above.</td></tr>
               ) : (
                 users.map((u) => (
                   <React.Fragment key={u.id}>
@@ -167,6 +179,21 @@ function AccountsManager({ role, label }) {
                           ? <input className="form-input" value={editForm.employeeId} onChange={(e) => setEditForm({ ...editForm, employeeId: e.target.value })} placeholder="—" />
                           : (u.employeeId || '—')}
                       </td>
+                      {isManager && (
+                        <td style={td}>
+                          {editingId === u.id
+                            ? <select className="form-input" value={editForm.designation} onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}>
+                                {DESIGNATIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                              </select>
+                            : <span style={{
+                                display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700,
+                                background: (u.designation === 'Business Development Executive') ? '#E0E7FF' : '#F1F5F9',
+                                color: (u.designation === 'Business Development Executive') ? '#3730A3' : '#334155'
+                              }}>
+                                {u.designation || 'Manager'}
+                              </span>}
+                        </td>
+                      )}
                       <td style={td}>
                         <span style={{
                           display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700,
@@ -198,7 +225,7 @@ function AccountsManager({ role, label }) {
                     </tr>
                     {pwId === u.id && (
                       <tr>
-                        <td style={{ ...td, background: '#F8FAFC' }} colSpan={5}>
+                        <td style={{ ...td, background: '#F8FAFC' }} colSpan={isManager ? 6 : 5}>
                           <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'end', flexWrap: 'wrap' }}>
                             <Field label={`New Password for ${u.name}`}><input className="form-input" type="password" value={pwForm.newPassword} onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })} placeholder="Min 8 characters" /></Field>
                             <Field label="Confirm Password"><input className="form-input" type="password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} placeholder="Re-enter password" /></Field>
