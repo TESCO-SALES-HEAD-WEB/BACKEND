@@ -57,9 +57,9 @@ router.post('/login', async (req, res) => {
 router.get('/managers', async (req, res) => {
   try {
     const managers = await User.find({ role: 'Sales Manager', isActive: true })
-      .select('name email employeeId')
+      .select('name email employeeId designation')
       .sort({ name: 1 });
-    res.json(managers.map((u) => ({ name: u.name, email: u.email, employeeId: u.employeeId })));
+    res.json(managers.map((u) => ({ name: u.name, email: u.email, employeeId: u.employeeId, designation: u.designation || 'Manager' })));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
