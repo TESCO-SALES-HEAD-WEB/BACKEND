@@ -3,7 +3,7 @@ import {
   Users, Sparkles, Flame, Thermometer, Snowflake,
   CalendarCheck, FileText, CheckCircle, Trash2, XCircle,
   ChevronDown, Activity, Edit2, Download, Trash, Edit3, Calendar,
-  Phone, CheckCircle2, Clock, X
+  Phone, CheckCircle2, Clock, X, Search
 } from 'lucide-react';
 import DateRangePicker from '../components/DateRangePicker';
 import ScopeFilter from '../components/ScopeFilter';
@@ -741,6 +741,7 @@ export default function Leads() {
   const [selectedLeadSource, setSelectedLeadSource] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedDesignReq, setSelectedDesignReq] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [range, setRange] = useState({ start: null, end: null });
 
   // Manager View scopes to the selected manager (matching a real Manager account);
@@ -772,7 +773,14 @@ export default function Leads() {
   };
 
   // Filter Logic
+  const searchQ = searchQuery.trim().toLowerCase();
+  const matchesSearch = (lead) => {
+    if (!searchQ) return true;
+    return [lead.name, lead.company, lead.phone, lead.email, lead.id, lead.location, lead.city, lead.projectType, lead.service, lead.manager]
+      .some((v) => String(v || '').toLowerCase().includes(searchQ));
+  };
   const filteredLeads = managerLeads.filter(lead => {
+    if (!matchesSearch(lead)) return false;
     if (selectedService !== 'All' && String(lead.service || '').toUpperCase() !== selectedService.toUpperCase()) return false;
     if (selectedLeadSource !== 'All' && String(lead.source || '').toUpperCase() !== selectedLeadSource.toUpperCase()) return false;
     if (selectedStatus === 'Overdue') { if (getFollowUpState(lead) !== 'overdue') return false; }
@@ -842,6 +850,26 @@ export default function Leads() {
       </div>
 
       <div className="leads-filters">
+        <div className="leads-search" style={{ position: 'relative', flex: '1 1 280px', maxWidth: '360px' }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search name, phone, company, email, ID…"
+            style={{ width: '100%', padding: '0.55rem 2.2rem 0.55rem 2.2rem', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', color: 'var(--text-main, #111827)', background: 'var(--surface-color, #fff)', boxSizing: 'border-box', outline: 'none' }}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              title="Clear search"
+              style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'inline-flex', padding: '2px' }}
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
         <DateRangePicker onApply={(s, e) => setRange({ start: s, end: e })} />
         <ScopeFilter />
       </div>
