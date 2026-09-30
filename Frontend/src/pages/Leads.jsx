@@ -676,7 +676,8 @@ export default function Leads() {
   const filteredLeads = managerLeads.filter(lead => {
     if (selectedService !== 'All' && String(lead.service || '').toUpperCase() !== selectedService.toUpperCase()) return false;
     if (selectedLeadSource !== 'All' && String(lead.source || '').toUpperCase() !== selectedLeadSource.toUpperCase()) return false;
-    if (selectedStatus !== 'All' && String(lead.status || '').toUpperCase() !== selectedStatus.toUpperCase()) return false;
+    if (selectedStatus === 'Overdue') { if (getFollowUpState(lead) !== 'overdue') return false; }
+    else if (selectedStatus !== 'All' && String(lead.status || '').toUpperCase() !== selectedStatus.toUpperCase()) return false;
     // Hide Junk leads from the default (All) view; they remain viewable via the Status filter (Junk).
     if (selectedStatus === 'All' && String(lead.status || '').toLowerCase().includes('junk')) return false;
     if (!inSelectedRange(lead.date || lead.createdAt)) return false;
@@ -713,6 +714,7 @@ export default function Leads() {
   const orderCount = rangeLeads.filter(l => Sx(l.status).includes('order')).length;
   const junkCount = rangeLeads.filter(l => Sx(l.status).includes('junk')).length;
   const lostCount = rangeLeads.filter(l => Sx(l.status).includes('lost')).length;
+  const overdueCount = rangeLeads.filter(l => !(l.status || '').toLowerCase().includes('junk') && getFollowUpState(l) === 'overdue').length;
 
   return (
     <div className="leads-page">
@@ -784,9 +786,9 @@ export default function Leads() {
             <div className="metric-header"><span className="metric-title">Junk</span><Trash2 size={16} /></div>
             <div className="metric-value">{junkCount}</div><div className="metric-subtitle">Unqualified leads</div>
           </div>
-          <div className="metric-card card-rose">
-            <div className="metric-header"><span className="metric-title">{viewMode === 'manager' ? 'Lost Deal' : 'Lost'}</span><XCircle size={16} /></div>
-            <div className="metric-value">{lostCount}</div><div className="metric-subtitle">{viewMode === 'manager' ? 'Unsuccessful deals' : 'Unconverted leads'}</div>
+          <div className={`metric-card card-red ${selectedStatus === 'Overdue' ? 'active' : ''}`} onClick={() => setSelectedStatus(selectedStatus === 'Overdue' ? 'All' : 'Overdue')} style={{ cursor: 'pointer' }}>
+            <div className="metric-header"><span className="metric-title">Overdue</span><Clock size={16} /></div>
+            <div className="metric-value">{overdueCount}</div><div className="metric-subtitle">Follow-up passed</div>
           </div>
         </div>
       </div>
