@@ -439,3 +439,57 @@ input, select, textarea {
   opacity: 0;
   cursor: pointer;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Global colorful KPI cards — applied to EVERY section (Dashboard, Sales
+   Pipeline, Appointments, Quotations, Order Confirm, Lead Management, …) so
+   all overview cards look the same colourful style as the Coordinator app.
+   Vivid pastel background + black value text + coloured icon.
+   Higher specificity (.metric-card.card-X) so these win over older globals.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.metric-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+.metric-card .metric-header { display: flex; align-items: center; justify-content: space-between; }
+.metric-card .metric-title { font-size: 0.875rem; font-weight: 500; color: #64748b; }
+.metric-card .metric-value { font-size: 1.75rem; font-weight: 700; color: #111827; letter-spacing: -0.5px; line-height: 1.1; }
+.metric-card .metric-subtitle { font-size: 0.75rem; font-weight: 500; color: #64748b; }
+
+/* Exact Coordinator card colours */
+.metric-card.card-grey    { background: #EEF4FF; border-color: #C7D2FE; }
+.metric-card.card-blue    { background: #F0F9FF; border-color: #BAE6FD; }
+.metric-card.card-red     { background: #FFF1F2; border-color: #FECDD3; }
+.metric-card.card-orange  { background: #FFF7ED; border-color: #FED7AA; }
+.metric-card.card-slate   { background: #F8FAFC; border-color: #CBD5E1; }
+.metric-card.card-green   { background: #ECFDF5; border-color: #BBF7D0; }
+.metric-card.card-purple  { background: #F5F3FF; border-color: #DDD6FE; }
+.metric-card.card-emerald { background: #DCFCE7; border-color: #86EFAC; }
+.metric-card.card-rose    { background: #FFF1F2; border-color: #FECDD3; }
+.metric-card.card-indigo  { background: #EEF4FF; border-color: #C7D2FE; }
+.metric-card.card-yellow  { background: #FEFCE8; border-color: #FEF08A; }
+.metric-card.card-cyan    { background: #ECFEFF; border-color: #A5F3FC; }
+
+/* Coloured icons per card */
+.metric-card.card-grey    .metric-header svg, .metric-card.card-grey    .metric-icon { color: #6366f1; }
+.metric-card.card-blue    .metric-header svg, .metric-card.card-blue    .metric-icon { color: #0ea5e9; }
+.metric-card.card-red     .metric-header svg, .metric-card.card-red     .metric-icon { color: #f43f5e; }
+.metric-card.card-orange  .metric-header svg, .metric-card.card-orange  .metric-icon { color: #f97316; }
+.metric-card.card-slate   .metric-header svg, .metric-card.card-slate   .metric-icon { color: #64748b; }
+.metric-card.card-green   .metric-header svg, .metric-card.card-green   .metric-icon { color: #22c55e; }
+.metric-card.card-purple  .metric-header svg, .metric-card.card-purple  .metric-icon { color: #a855f7; }
+.metric-card.card-emerald .metric-header svg, .metric-card.card-emerald .metric-icon { color: #16a34a; }
+.metric-card.card-rose    .metric-header svg, .metric-card.card-rose    .metric-icon { color: #f43f5e; }
+.metric-card.card-indigo  .metric-header svg, .metric-card.card-indigo  .metric-icon { color: #6366f1; }
+.metric-card.card-yellow  .metric-header svg, .metric-card.card-yellow  .metric-icon { color: #eab308; }
+.metric-card.card-cyan    .metric-header svg, .metric-card.card-cyan    .metric-icon { color: #06b6d4; }
