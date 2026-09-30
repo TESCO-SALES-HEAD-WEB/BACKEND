@@ -1112,36 +1112,26 @@ export default function Leads() {
                   </div>
                 </td>
 
-                {/* Assign To Column — the Head assigns leads ONLY from the Coordinator View.
-                    In Manager View this is read-only (shows the current assignment). */}
+                {/* Assign To Column — working dropdown; the Head assigns a Manager/BDE here. */}
                 <td>
-                  {viewMode === 'coordinator' ? (
-                    <div className="table-select-wrapper">
-                      <select
-                        className="table-select"
-                        value={lead.manager || 'Unassigned'}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => { const v = e.target.value; setLeadsData(prev => prev.map(l => (l.id === lead.id ? { ...l, manager: v } : l))); api(`/leads/${lead.id}`, { method: 'PUT', body: { manager: v } }).catch(() => {}); }}
-                      >
-                        <option value="Unassigned">Unassigned</option>
-                        {managers.map((m) => (
-                          <option key={m.email || m.employeeId || m.name} value={m.name}>{managerLabel(m)}</option>
-                        ))}
-                        {/* Preserve an existing assignment whose name isn't in the current managers list */}
-                        {lead.manager && lead.manager !== 'Unassigned' && !managers.some((m) => m.name === lead.manager) && (
-                          <option value={lead.manager}>{lead.manager}</option>
-                        )}
-                      </select>
-                      <ChevronDown size={14} className="table-select-chevron" />
-                    </div>
-                  ) : (
-                    <span
-                      title="Switch to Coordinator View to assign leads"
-                      style={{ display: 'inline-block', fontSize: '0.8125rem', fontWeight: 600, color: (lead.manager && lead.manager !== 'Unassigned') ? 'var(--text-main, #111827)' : '#94a3b8' }}
+                  <div className="table-select-wrapper">
+                    <select
+                      className="table-select"
+                      value={lead.manager || 'Unassigned'}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => { const v = e.target.value; setLeadsData(prev => prev.map(l => (l.id === lead.id ? { ...l, manager: v } : l))); api(`/leads/${lead.id}`, { method: 'PUT', body: { manager: v } }).catch(() => {}); }}
                     >
-                      {assignedLabel(lead.manager)}
-                    </span>
-                  )}
+                      <option value="Unassigned">Unassigned</option>
+                      {managers.map((m) => (
+                        <option key={m.email || m.employeeId || m.name} value={m.name}>{managerLabel(m)}</option>
+                      ))}
+                      {/* Preserve an existing assignment whose name isn't in the current managers list */}
+                      {lead.manager && lead.manager !== 'Unassigned' && !managers.some((m) => m.name === lead.manager) && (
+                        <option value={lead.manager}>{lead.manager}</option>
+                      )}
+                    </select>
+                    <ChevronDown size={14} className="table-select-chevron" />
+                  </div>
                 </td>
 
                 {/* Follow Up Column — remarks-first workflow (Log call / Schedule modal) */}

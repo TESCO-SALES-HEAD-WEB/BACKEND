@@ -311,9 +311,10 @@
   transform: translateY(-1px);
   filter: brightness(0.97);
 }
+/* Action button colours matched to the Coordinator app exactly */
 .btn-activity {
-  background: #ede9fe;
-  color: #7c3aed;
+  background: #4f46e5;
+  color: #ffffff;
 }
 .btn-edit {
   background: #e0e7ff;
@@ -321,7 +322,7 @@
 }
 .btn-download {
   background: #dcfce7;
-  color: #16a34a;
+  color: #166534;
 }
 .btn-delete {
   background: #fee2e2;
@@ -445,26 +446,36 @@
   font-weight: 600;
   color: #475569;
 }
-.metric-value {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #0f172a;
+/* Card text is BLACK (matches the Coordinator app); only the icon is colored. */
+.leads-overview .metric-card .metric-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
   line-height: 1.1;
 }
-.metric-subtitle {
-  font-size: 0.72rem;
-  color: #64748b;
-}
+.leads-overview .metric-card .metric-title { color: #64748b; font-weight: 500; font-size: 0.875rem; }
+.leads-overview .metric-card .metric-subtitle { color: #64748b; font-weight: 500; font-size: 0.75rem; }
 
-/* Colored value numbers per card theme so the KPIs read as vivid, not flat */
-.card-blue    .metric-value { color: #0284c7; }
-.card-red     .metric-value { color: #dc2626; }
-.card-orange  .metric-value { color: #ea580c; }
-.card-slate   .metric-value { color: #475569; }
-.card-green   .metric-value { color: #16a34a; }
-.card-purple  .metric-value { color: #9333ea; }
-.card-emerald .metric-value { color: #059669; }
-.card-rose    .metric-value { color: #e11d48; }
-.card-indigo  .metric-value { color: #4f46e5; }
-.card-yellow  .metric-value { color: #ca8a04; }
-.card-cyan    .metric-value { color: #0891b2; }
+/* Exact colorful backgrounds + borders, matching the Coordinator overview cards.
+   Higher specificity (.leads-overview .metric-card.card-X) so these win over globals. */
+.leads-overview .metric-card.card-grey    { background: #EEF4FF; border-color: #C7D2FE; }
+.leads-overview .metric-card.card-blue    { background: #F0F9FF; border-color: #BAE6FD; }
+.leads-overview .metric-card.card-red     { background: #FFF1F2; border-color: #FECDD3; }
+.leads-overview .metric-card.card-orange  { background: #FFF7ED; border-color: #FED7AA; }
+.leads-overview .metric-card.card-slate   { background: #F8FAFC; border-color: #CBD5E1; }
+.leads-overview .metric-card.card-green   { background: #ECFDF5; border-color: #BBF7D0; }
+.leads-overview .metric-card.card-purple  { background: #F5F3FF; border-color: #DDD6FE; }
+.leads-overview .metric-card.card-emerald { background: #DCFCE7; border-color: #86EFAC; }
+.leads-overview .metric-card.card-rose    { background: #FFF1F2; border-color: #FECDD3; }
+.leads-overview .metric-card.card-indigo  { background: #EEF4FF; border-color: #C7D2FE; }
+
+/* Colored icons per card theme (Coordinator uses a colored icon on a black-text card). */
+.leads-overview .metric-card.card-grey    .metric-header svg { color: #6366f1; }
+.leads-overview .metric-card.card-blue    .metric-header svg { color: #0ea5e9; }
+.leads-overview .metric-card.card-red     .metric-header svg { color: #f43f5e; }
+.leads-overview .metric-card.card-orange  .metric-header svg { color: #f97316; }
+.leads-overview .metric-card.card-slate   .metric-header svg { color: #64748b; }
+.leads-overview .metric-card.card-green   .metric-header svg { color: #22c55e; }
+.leads-overview .metric-card.card-purple  .metric-header svg { color: #a855f7; }
+.leads-overview .metric-card.card-emerald .metric-header svg { color: #16a34a; }
