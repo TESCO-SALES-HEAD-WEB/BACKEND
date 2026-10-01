@@ -109,6 +109,10 @@ export default function Leads() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [designReqDropdownOpen, setDesignReqDropdownOpen] = useState(false);
   const [assignDropdownOpen, setAssignDropdownOpen] = useState(false);
+  // Screen-space position for the Assign To filter menu. It is rendered with
+  // position:fixed from these coords so it escapes the table's horizontal-scroll
+  // container (overflow-x:auto) instead of being clipped/overlapping the table.
+  const [assignMenuPos, setAssignMenuPos] = useState({ top: 0, right: 0 });
 
   const [selectedLead, setSelectedLead] = useState(null);
   const [drawerTab, setDrawerTab] = useState('specifications');
@@ -1033,11 +1037,15 @@ export default function Leads() {
                   </div>
                 )}
               </th>
-              <th className="th-interactive" onClick={() => setAssignDropdownOpen(!assignDropdownOpen)}>
+              <th className="th-interactive" onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                setAssignMenuPos({ top: Math.round(r.bottom + 4), right: Math.max(8, Math.round(window.innerWidth - r.right)) });
+                setAssignDropdownOpen((o) => !o);
+              }}>
                 {selectedAssign === 'All' ? 'Assign To (All)' : selectedAssign} <ChevronDown size={14} style={{display:'inline', verticalAlign:'middle'}}/>
 
                 {assignDropdownOpen && (
-                  <div className="dark-dropdown-menu" style={{right: 0, left: 'auto'}}>
+                  <div className="dark-dropdown-menu" style={{ position: 'fixed', top: assignMenuPos.top, right: assignMenuPos.right, left: 'auto', maxHeight: '50vh', overflowY: 'auto' }}>
                     <div className={`dark-dropdown-item ${selectedAssign === 'All' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setSelectedAssign('All'); setAssignDropdownOpen(false); }}>
                       {selectedAssign === 'All' && <span className="check-icon">✓</span>} Assign To (All)
                     </div>
