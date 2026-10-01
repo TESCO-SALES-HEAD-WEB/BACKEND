@@ -311,20 +311,26 @@
   transform: translateY(-1px);
   filter: brightness(0.97);
 }
-/* Action button colours matched to the Coordinator app exactly */
-.btn-activity {
+/* Action button colours matched to the Coordinator app exactly.
+   NOTE: other pages (Pipeline.css, Quotations.css) define a plain, unscoped
+   `.action-btn { background:#f1f5f9 }`. All page CSS is bundled into one file, so
+   that grey rule can load AFTER this one and — having equal specificity — override
+   these colours, turning the Leads action buttons grey. Scoping each colour to
+   `.action-btn.btn-*` raises specificity (0,2,0) so these always win regardless of
+   bundle order, without affecting the other pages' buttons. */
+.action-btn.btn-activity {
   background: #4f46e5;
   color: #ffffff;
 }
-.btn-edit {
+.action-btn.btn-edit {
   background: #e0e7ff;
   color: #4f46e5;
 }
-.btn-download {
+.action-btn.btn-download {
   background: #dcfce7;
   color: #166534;
 }
-.btn-delete {
+.action-btn.btn-delete {
   background: #fee2e2;
   color: #dc2626;
 }
