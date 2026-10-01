@@ -199,6 +199,7 @@ export default function Dashboard() {
       apptFixed: ma.filter((a) => !isVisit(a)).length,
       quotation: mq.length,
       confirmed: ml.filter((l) => S(l.status).includes('order confirmed')).length,
+      overdue: ml.filter((l) => { if (l.followUpDone) return false; if (S(l.status).includes('junk')) return false; const raw = String(l.followUp || '').trim(); if (!raw || /^(no date|pending)$/i.test(raw)) return true; const t = new Date(l.followUp).getTime(); return !isNaN(t) && t < Date.now(); }).length,
       pipeline: ml.filter(inPipeline).reduce((t, l) => t + leadAmount(l), 0),
       collected: mp.reduce((t, x) => t + (Number(x.amountCollected) || 0), 0),
     };
@@ -244,7 +245,7 @@ export default function Dashboard() {
             <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ background: '#F6F8FB', textAlign: 'left' }}>
-                  {['Manager', 'Total Leads', 'Hot', 'Appt Fixed', 'Quotations', 'Order Confirmed', 'Pipeline Value', 'Collected'].map((h, i) => (
+                  {['Manager', 'Total Leads', 'Hot', 'Appt Fixed', 'Quotations', 'Order Confirmed', 'Overdue', 'Pipeline Value', 'Collected'].map((h, i) => (
                     <th key={h} style={{ padding: '0.8rem 1rem', fontWeight: 700, color: '#475569', textAlign: i === 0 ? 'left' : 'center', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -264,6 +265,7 @@ export default function Dashboard() {
                       <td style={{ padding: '0.8rem 1rem', textAlign: 'center' }}>{r.apptFixed}</td>
                       <td style={{ padding: '0.8rem 1rem', textAlign: 'center' }}>{r.quotation}</td>
                       <td style={{ padding: '0.8rem 1rem', textAlign: 'center' }}>{r.confirmed}</td>
+                      <td style={{ padding: '0.8rem 1rem', textAlign: 'center', fontWeight: 700, color: r.overdue ? '#DC2626' : '#94A3B8' }}>{r.overdue}</td>
                       <td style={{ padding: '0.8rem 1rem', textAlign: 'center', fontWeight: 700, color: '#0F9D8F' }}>{fmtMoney(r.pipeline)}</td>
                       <td style={{ padding: '0.8rem 1rem', textAlign: 'center', fontWeight: 700, color: '#166534' }}>{fmtMoney(r.collected)}</td>
                     </tr>
