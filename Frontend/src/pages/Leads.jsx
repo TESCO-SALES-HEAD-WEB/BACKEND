@@ -109,10 +109,6 @@ export default function Leads() {
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [designReqDropdownOpen, setDesignReqDropdownOpen] = useState(false);
   const [assignDropdownOpen, setAssignDropdownOpen] = useState(false);
-  // Screen-space position for the Assign To filter menu. It is rendered with
-  // position:fixed from these coords so it escapes the table's horizontal-scroll
-  // container (overflow-x:auto) instead of being clipped/overlapping the table.
-  const [assignMenuPos, setAssignMenuPos] = useState({ top: 0, right: 0 });
 
   const [selectedLead, setSelectedLead] = useState(null);
   const [drawerTab, setDrawerTab] = useState('specifications');
@@ -1037,22 +1033,11 @@ export default function Leads() {
                   </div>
                 )}
               </th>
-              <th className="th-interactive" onClick={(e) => {
-                const r = e.currentTarget.getBoundingClientRect();
-                const right = Math.max(8, Math.round(window.innerWidth - r.right));
-                const spaceBelow = window.innerHeight - r.bottom;
-                // Open upward when there isn't enough room below (header near the bottom of
-                // the viewport), so the menu stays fully on-screen instead of being cut off.
-                const openUp = spaceBelow < 260 && r.top > spaceBelow;
-                setAssignMenuPos(openUp
-                  ? { bottom: Math.round(window.innerHeight - r.top + 4), right, maxHeight: Math.max(160, Math.round(r.top - 16)) }
-                  : { top: Math.round(r.bottom + 4), right, maxHeight: Math.max(160, Math.round(spaceBelow - 16)) });
-                setAssignDropdownOpen((o) => !o);
-              }}>
+              <th className="th-interactive" onClick={() => setAssignDropdownOpen(!assignDropdownOpen)}>
                 {selectedAssign === 'All' ? 'Assign To (All)' : selectedAssign} <ChevronDown size={14} style={{display:'inline', verticalAlign:'middle'}}/>
 
                 {assignDropdownOpen && (
-                  <div className="dark-dropdown-menu" style={{ position: 'fixed', right: assignMenuPos.right, left: 'auto', ...(assignMenuPos.top != null ? { top: assignMenuPos.top } : { bottom: assignMenuPos.bottom }), maxHeight: assignMenuPos.maxHeight, overflowY: 'auto' }}>
+                  <div className="dark-dropdown-menu" style={{ right: 0, left: 'auto', maxHeight: '320px', overflowY: 'auto' }}>
                     <div className={`dark-dropdown-item ${selectedAssign === 'All' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setSelectedAssign('All'); setAssignDropdownOpen(false); }}>
                       {selectedAssign === 'All' && <span className="check-icon">✓</span>} Assign To (All)
                     </div>
