@@ -1,6 +1,18 @@
+const mongoose = require('mongoose');
 const router = require('express').Router();
 const Lead = require('../models/Lead');
 const verifyApiKey = require('../middleware/apiKey');
+
+// Build a filter that matches a lead by EITHER its business id ("LD-xxxx") OR its
+// Mongo _id. The frontend sends lead.id, which is the "LD-xxxx" value for leads that
+// have one, but falls back to the Mongo _id for records written by the Manager/
+// Coordinator apps into the shared collection without an LD id. Matching on both makes
+// assignment (and delete) work for every lead instead of silently 404-ing.
+const leadKeyFilter = (key) => {
+  const or = [{ id: key }];
+  if (mongoose.Types.ObjectId.isValid(key)) or.push({ _id: key });
+  return { $or: or };
+};
 
 // Map raw channel keys to the source labels the frontend recognizes.
 const SOURCE_MAP = {
@@ -122,7 +134,9 @@ router.post('/bulk', async (req, res) => {
 // PUT /api/leads/:id — update one lead (by LD-xxxx id)
 router.put('/:id', async (req, res) => {
   try {
-    const lead = await Lead.findOneAndUpdate({ id: req.params.id }, { $set: req.body }, { new: true });
+    const body = { ...req.body };
+    delete body._id; delete body.id; // never let a body overwrite the identity fields
+    const lead = await Lead.findOneAndUpdate(leadKeyFilter(req.params.id), { $set: body }, { new: true });
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
     res.json(lead);
   } catch (err) {
@@ -143,7 +157,7 @@ router.delete('/', async (req, res) => {
 // DELETE /api/leads/:id — delete one lead
 router.delete('/:id', async (req, res) => {
   try {
-    const lead = await Lead.findOneAndDelete({ id: req.params.id });
+    const lead = await Lead.findOneAndDelete(leadKeyFilter(req.params.id));
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
     res.json({ success: true });
   } catch (err) {
