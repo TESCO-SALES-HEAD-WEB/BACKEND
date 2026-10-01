@@ -108,6 +108,7 @@ export default function Leads() {
   const [leadSourceDropdownOpen, setLeadSourceDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [designReqDropdownOpen, setDesignReqDropdownOpen] = useState(false);
+  const [assignDropdownOpen, setAssignDropdownOpen] = useState(false);
 
   const [selectedLead, setSelectedLead] = useState(null);
   const [drawerTab, setDrawerTab] = useState('specifications');
@@ -758,6 +759,9 @@ export default function Leads() {
   const [selectedLeadSource, setSelectedLeadSource] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedDesignReq, setSelectedDesignReq] = useState('All');
+  // Assign To column filter (header dropdown). 'All' shows everyone; 'Unassigned' shows
+  // leads with no manager; otherwise filters to the chosen manager's name.
+  const [selectedAssign, setSelectedAssign] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [range, setRange] = useState({ start: null, end: null });
 
@@ -804,6 +808,13 @@ export default function Leads() {
     else if (selectedStatus !== 'All' && String(lead.status || '').toUpperCase() !== selectedStatus.toUpperCase()) return false;
     // Hide Junk leads from the default (All) view; they remain viewable via the Status filter (Junk).
     if (selectedStatus === 'All' && String(lead.status || '').toLowerCase().includes('junk')) return false;
+    // Assign To filter (header dropdown).
+    if (selectedAssign === 'Unassigned') {
+      const m = String(lead.manager || '').trim();
+      if (m && m.toLowerCase() !== 'unassigned') return false;
+    } else if (selectedAssign !== 'All' && !sameMgr(lead.manager, selectedAssign)) {
+      return false;
+    }
     if (!inSelectedRange(lead.date || lead.createdAt)) return false;
     return true;
   }).sort((a, b) => {
@@ -1022,7 +1033,25 @@ export default function Leads() {
                   </div>
                 )}
               </th>
-              <th>Assign To (All) <ChevronDown size={14} style={{display:'inline', verticalAlign:'middle'}}/></th>
+              <th className="th-interactive" onClick={() => setAssignDropdownOpen(!assignDropdownOpen)}>
+                {selectedAssign === 'All' ? 'Assign To (All)' : selectedAssign} <ChevronDown size={14} style={{display:'inline', verticalAlign:'middle'}}/>
+
+                {assignDropdownOpen && (
+                  <div className="dark-dropdown-menu" style={{right: 0, left: 'auto'}}>
+                    <div className={`dark-dropdown-item ${selectedAssign === 'All' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setSelectedAssign('All'); setAssignDropdownOpen(false); }}>
+                      {selectedAssign === 'All' && <span className="check-icon">✓</span>} Assign To (All)
+                    </div>
+                    <div className={`dark-dropdown-item ${selectedAssign === 'Unassigned' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setSelectedAssign('Unassigned'); setAssignDropdownOpen(false); }}>
+                      {selectedAssign === 'Unassigned' && <span className="check-icon">✓</span>} Unassigned
+                    </div>
+                    {managers.map((m) => (
+                      <div key={m.email || m.employeeId || m.name} className={`dark-dropdown-item ${selectedAssign === m.name ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setSelectedAssign(m.name); setAssignDropdownOpen(false); }}>
+                        {selectedAssign === m.name && <span className="check-icon">✓</span>} {managerLabel(m)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </th>
               <th>Follow Up</th>
               <th>Actions</th>
               <th>Notes</th>
