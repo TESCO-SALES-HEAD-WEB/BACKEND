@@ -96,17 +96,12 @@ export default function Topbar({ toggleSidebar }) {
       </div>
 
       <div className="topbar__right">
-        <div className="topbar__date-picker">
-          <span className="topbar__date-value">This Month</span>
-        </div>
-
         <div ref={panelRef} style={{ position: 'relative' }}>
           <button className="topbar__icon-btn" onClick={() => setOpen(o => !o)} title="Notifications">
             <Bell size={20} />
             {unreadCount > 0 && (
               <span
-                className="topbar__notification-dot"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 16, height: 16, padding: '0 4px', borderRadius: 9999, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, lineHeight: 1 }}
+                style={{ position: 'absolute', top: 2, right: 2, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 9999, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 700, lineHeight: '16px', textAlign: 'center', border: '2px solid #fff' }}
               >
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>

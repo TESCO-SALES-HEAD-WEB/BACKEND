@@ -113,6 +113,10 @@ export default function Leads() {
   const [drawerTab, setDrawerTab] = useState('specifications');
   const [leadsData, setLeadsData] = useState([]);
   const [managers, setManagers] = useState([]);
+  // Lead ids whose "Assign To" change is still being saved. The 20s auto-refresh
+  // (loadLeadsAll) replaces leadsData with the server snapshot; without this guard a
+  // refresh landing before the assignment PUT is persisted would revert the dropdown.
+  const pendingAssignRef = useRef(new Set());
   const [apptRecords, setApptRecords] = useState([]);   // appointments collection — for record-based Appt Fixed count
   const [quoteRecords, setQuoteRecords] = useState([]);  // quotations collection — for record-based Quotation Sent count
   const [pendingStatusChange, setPendingStatusChange] = useState(null);
@@ -399,8 +403,21 @@ export default function Leads() {
   // Fetch real data from the shared CRM backend on mount
   const loadLeadsAll = () => {
     api('/leads')
-      .then((d) => setLeadsData(Array.isArray(d) ? d : []))
-      .catch(() => setLeadsData([]));
+      .then((d) => {
+        const server = Array.isArray(d) ? d : [];
+        setLeadsData((prev) => {
+          // Keep the locally-chosen manager for any lead whose assignment is still
+          // being saved, so this refresh can't revert a just-picked Manager/BDE.
+          if (pendingAssignRef.current.size === 0) return server;
+          const prevById = new Map(prev.map((l) => [l.id, l]));
+          return server.map((sv) =>
+            pendingAssignRef.current.has(sv.id) && prevById.has(sv.id)
+              ? { ...sv, manager: prevById.get(sv.id).manager }
+              : sv
+          );
+        });
+      })
+      .catch(() => setLeadsData((prev) => (prev && prev.length ? prev : [])));
     api('/auth/managers')
       .then((d) => setManagers(Array.isArray(d) ? d : []))
       .catch(() => setManagers([]));
@@ -1119,7 +1136,21 @@ export default function Leads() {
                       className="table-select"
                       value={lead.manager || 'Unassigned'}
                       onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => { const v = e.target.value; setLeadsData(prev => prev.map(l => (l.id === lead.id ? { ...l, manager: v } : l))); api(`/leads/${lead.id}`, { method: 'PUT', body: { manager: v } }).catch(() => {}); }}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const prevManager = lead.manager || 'Unassigned';
+                        // Optimistic update + protect this lead from the auto-refresh clobber
+                        // until the assignment is confirmed saved to the shared DB.
+                        pendingAssignRef.current.add(lead.id);
+                        setLeadsData(prev => prev.map(l => (l.id === lead.id ? { ...l, manager: v } : l)));
+                        api(`/leads/${lead.id}`, { method: 'PUT', body: { manager: v } })
+                          .then(() => { pendingAssignRef.current.delete(lead.id); })
+                          .catch(() => {
+                            // Save failed — revert the dropdown and stop protecting it.
+                            pendingAssignRef.current.delete(lead.id);
+                            setLeadsData(prev => prev.map(l => (l.id === lead.id ? { ...l, manager: prevManager } : l)));
+                          });
+                      }}
                     >
                       <option value="Unassigned">Unassigned</option>
                       {managers.map((m) => (

@@ -79,7 +79,8 @@
 }
 
 .topbar__icon-btn {
-  color: var(--text-secondary);
+  /* Clear, high-contrast bell (matches the Manager app) */
+  color: var(--text-primary);
   position: relative;
   width: 36px;
   height: 36px;
