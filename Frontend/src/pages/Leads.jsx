@@ -1039,13 +1039,20 @@ export default function Leads() {
               </th>
               <th className="th-interactive" onClick={(e) => {
                 const r = e.currentTarget.getBoundingClientRect();
-                setAssignMenuPos({ top: Math.round(r.bottom + 4), right: Math.max(8, Math.round(window.innerWidth - r.right)) });
+                const right = Math.max(8, Math.round(window.innerWidth - r.right));
+                const spaceBelow = window.innerHeight - r.bottom;
+                // Open upward when there isn't enough room below (header near the bottom of
+                // the viewport), so the menu stays fully on-screen instead of being cut off.
+                const openUp = spaceBelow < 260 && r.top > spaceBelow;
+                setAssignMenuPos(openUp
+                  ? { bottom: Math.round(window.innerHeight - r.top + 4), right, maxHeight: Math.max(160, Math.round(r.top - 16)) }
+                  : { top: Math.round(r.bottom + 4), right, maxHeight: Math.max(160, Math.round(spaceBelow - 16)) });
                 setAssignDropdownOpen((o) => !o);
               }}>
                 {selectedAssign === 'All' ? 'Assign To (All)' : selectedAssign} <ChevronDown size={14} style={{display:'inline', verticalAlign:'middle'}}/>
 
                 {assignDropdownOpen && (
-                  <div className="dark-dropdown-menu" style={{ position: 'fixed', top: assignMenuPos.top, right: assignMenuPos.right, left: 'auto', maxHeight: '50vh', overflowY: 'auto' }}>
+                  <div className="dark-dropdown-menu" style={{ position: 'fixed', right: assignMenuPos.right, left: 'auto', ...(assignMenuPos.top != null ? { top: assignMenuPos.top } : { bottom: assignMenuPos.bottom }), maxHeight: assignMenuPos.maxHeight, overflowY: 'auto' }}>
                     <div className={`dark-dropdown-item ${selectedAssign === 'All' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); setSelectedAssign('All'); setAssignDropdownOpen(false); }}>
                       {selectedAssign === 'All' && <span className="check-icon">✓</span>} Assign To (All)
                     </div>
