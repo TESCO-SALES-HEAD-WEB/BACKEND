@@ -112,6 +112,19 @@ router.post('/', async (req, res) => {
   }
 });
 
+// A bulk sync pushes a portal's whole current lead list. If that snapshot is stale it
+// must NOT be allowed to wipe an assignment another portal just made — so we never let a
+// blank/"Unassigned" manager in a bulk payload overwrite a stored real manager. A genuine
+// re-assignment (a real name) still applies, and an explicit un-assign still works because
+// that goes through the targeted PUT below, not bulk.
+const isBlankAssignment = (v) => v == null || String(v).trim() === '' || /^unassigned$/i.test(String(v).trim());
+const stripBlankAssignment = (l) => {
+  const upd = { ...l };
+  if (isBlankAssignment(upd.manager)) delete upd.manager;
+  if (isBlankAssignment(upd.assignedTo)) delete upd.assignedTo;
+  return upd;
+};
+
 // POST /api/leads/bulk — upsert leads (sync from frontend state)
 router.post('/bulk', async (req, res) => {
   try {
@@ -120,7 +133,7 @@ router.post('/bulk', async (req, res) => {
     const ops = leads.map(l => ({
       updateOne: {
         filter: { id: l.id },
-        update: { $set: l },
+        update: { $set: stripBlankAssignment(l) },
         upsert: true
       }
     }));
