@@ -149,7 +149,7 @@ export default function Dashboard() {
       warm: countLead((l) => S(l.status).includes('warm')),
       cold: countLead((l) => S(l.status).includes('cold')),
       lost: countLead((l) => S(l.status).includes('lost')),
-      overdueFollowups: fLeads.filter((l) => { if (l.followUpDone) return false; if (S(l.status).includes('junk')) return false; const t = new Date(l.followUp).getTime(); return !isNaN(t) && t < Date.now(); }).length,
+      overdueFollowups: fLeads.filter((l) => { if (l.followUpDone) return false; if (S(l.status).includes('junk')) return false; const raw = String(l.followUp || '').trim(); if (!raw || /^(no date|pending)$/i.test(raw)) return true; const t = new Date(l.followUp).getTime(); return !isNaN(t) && t < Date.now(); }).length,
       junk: countLead((l) => S(l.status).includes('junk')),
       // record-based overview counts (match the real modules)
       apptFixed: fAppts.filter((a) => !isVisit(a)).length,
