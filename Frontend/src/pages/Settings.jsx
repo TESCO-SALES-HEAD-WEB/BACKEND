@@ -21,7 +21,10 @@ function Field({ label, children }) {
 }
 
 // Reusable account manager for a given role (Sales Manager / Sales Coordinator)
-function AccountsManager({ role, label }) {
+function AccountsManager({ role, label, endpoint }) {
+  // Default to the shared /users API (Manager/Coordinator). Purchase Managers use
+  // their own /purchase-managers API (separate purchase_managers collection).
+  const base = endpoint || '/users';
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState(null); // { type, text }
@@ -42,7 +45,7 @@ function AccountsManager({ role, label }) {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await api(`/users?role=${encodeURIComponent(role)}`);
+      const data = await api(base === '/users' ? `/users?role=${encodeURIComponent(role)}` : base);
       setUsers(Array.isArray(data) ? data : []);
     } catch (e) {
       flash('error', e.message || 'Failed to load accounts');
@@ -61,7 +64,7 @@ function AccountsManager({ role, label }) {
     if (form.password !== form.confirm) return flash('error', 'Passwords do not match');
     setBusy(true);
     try {
-      await api('/users', { method: 'POST', body: { name: form.name, email: form.email, employeeId: form.employeeId, role, password: form.password, ...(isManager ? { designation: form.designation } : {}) } });
+      await api(base, { method: 'POST', body: { name: form.name, email: form.email, employeeId: form.employeeId, role, password: form.password, ...(isManager ? { designation: form.designation } : {}) } });
       flash('success', `${label} account created`);
       setForm({ name: '', email: '', employeeId: '', password: '', confirm: '', designation: 'Manager' });
       load();
@@ -73,7 +76,7 @@ function AccountsManager({ role, label }) {
     if (!editForm.name.trim() || !editForm.email.trim()) return flash('error', 'Name and email are required');
     setBusy(true);
     try {
-      await api(`/users/${id}`, { method: 'PUT', body: { name: editForm.name, email: editForm.email, employeeId: editForm.employeeId, ...(isManager ? { designation: editForm.designation } : {}) } });
+      await api(`${base}/${id}`, { method: 'PUT', body: { name: editForm.name, email: editForm.email, employeeId: editForm.employeeId, ...(isManager ? { designation: editForm.designation } : {}) } });
       flash('success', 'Account updated');
       setEditingId(null);
       load();
@@ -86,7 +89,7 @@ function AccountsManager({ role, label }) {
     if (pwForm.newPassword !== pwForm.confirm) return flash('error', 'Passwords do not match');
     setBusy(true);
     try {
-      await api(`/users/${id}/password`, { method: 'PUT', body: { newPassword: pwForm.newPassword } });
+      await api(`${base}/${id}/password`, { method: 'PUT', body: { newPassword: pwForm.newPassword } });
       flash('success', 'Password updated');
       setPwId(null);
       setPwForm({ newPassword: '', confirm: '' });
@@ -249,9 +252,9 @@ function AccountsManager({ role, label }) {
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('Approval Rules');
 
-  const tabs = ['Approval Rules', 'Manager Accounts', 'Coordinator Accounts', 'Roles & Permissions', 'ID Format', 'Notifications', 'Organization', 'Security'];
+  const tabs = ['Approval Rules', 'Manager Accounts', 'Coordinator Accounts', 'Purchase Manager Accounts', 'Roles & Permissions', 'ID Format', 'Notifications', 'Organization', 'Security'];
 
-  const isAccountTab = activeTab === 'Manager Accounts' || activeTab === 'Coordinator Accounts';
+  const isAccountTab = activeTab === 'Manager Accounts' || activeTab === 'Coordinator Accounts' || activeTab === 'Purchase Manager Accounts';
 
   return (
     <div className="settings-container">
@@ -280,6 +283,7 @@ export default function Settings() {
 
           {activeTab === 'Manager Accounts' && <AccountsManager role="Sales Manager" label="Manager" />}
           {activeTab === 'Coordinator Accounts' && <AccountsManager role="Sales Coordinator" label="Coordinator" />}
+          {activeTab === 'Purchase Manager Accounts' && <AccountsManager role="Purchase Manager" label="Purchase Manager" endpoint="/purchase-managers" />}
 
           {activeTab === 'Approval Rules' && (
             <div className="settings-section">
