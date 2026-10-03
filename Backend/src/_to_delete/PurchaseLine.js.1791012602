@@ -1,0 +1,27 @@
+const mongoose = require('mongoose');
+
+// One material line of a Purchase Order (a PO with several materials has several
+// lines sharing the same `po` number). Totals, pending qty, outstanding amount,
+// delivery/payment status and progress are DERIVED on the client from these raw
+// fields, so the numbers are never hard-coded.
+const PurchaseLineSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true, unique: true }, // client-generated line id
+    po: { type: String, required: true },   // PO number, e.g. PO-001
+    poDate: String,                         // 'YYYY-MM-DD'
+    vid: { type: String, required: true },  // vendor id (VEN-xxx)
+    project: String,
+    material: String,
+    spec: String,                           // specification
+    qty: { type: Number, default: 0 },      // ordered qty
+    unit: String,
+    rate: { type: Number, default: 0 },     // rate per unit
+    received: { type: Number, default: 0 }, // received qty
+    expDate: String,                        // expected delivery 'YYYY-MM-DD'
+    dueDate: String,                        // payment due date 'YYYY-MM-DD'
+    paid: { type: Number, default: 0 },     // paid amount
+  },
+  { timestamps: true, strict: false }
+);
+
+module.exports = mongoose.model('PurchaseLine', PurchaseLineSchema);

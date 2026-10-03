@@ -1,0 +1,23 @@
+const mongoose = require('mongoose');
+
+// Procurement vendor master — used by the Purchase Manager portal.
+// Outstanding / available-credit are NOT stored; they are derived on the client
+// from the vendor's purchase-order lines (same approach as leads/payments).
+const VendorSchema = new mongoose.Schema(
+  {
+    vid: { type: String, required: true, unique: true }, // e.g. VEN-001
+    name: { type: String, required: true },
+    contact: String,        // contact person
+    mobile: String,
+    email: String,
+    address: String,
+    gst: String,            // 15-char GSTIN
+    material: String,       // material / service supplied
+    creditLimit: { type: Number, default: 0 },
+    terms: String,          // payment terms (Advance / 30 Days / ...)
+    status: { type: String, default: 'Active' }, // Active / Inactive / Blocked
+  },
+  { timestamps: true, strict: false }
+);
+
+module.exports = mongoose.model('Vendor', VendorSchema);

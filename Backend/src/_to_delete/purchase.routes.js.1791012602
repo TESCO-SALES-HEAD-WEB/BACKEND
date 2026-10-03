@@ -1,0 +1,103 @@
+// Procurement APIs for the Purchase Manager portal.
+// Security: every route requires a valid token (protect) AND a permitted role
+// (restrictTo). Purchase Manager owns this data; Sales Head may view/manage it
+// for oversight. No other role can read or write procurement records.
+const router = require('express').Router();
+const Vendor = require('../models/Vendor');
+const PurchaseLine = require('../models/PurchaseLine');
+const { protect, restrictTo } = require('../middleware/auth');
+
+const CAN = ['Purchase Manager', 'Sales Head'];
+
+// Every endpoint below is authenticated and role-guarded on the SERVER —
+// never trust the frontend for access control.
+router.use(protect, restrictTo(...CAN));
+
+/* ------------------------------- Vendors -------------------------------- */
+router.get('/vendors', async (req, res) => {
+  try {
+    const vendors = await Vendor.find().sort({ vid: 1 });
+    res.json(vendors);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/vendors', async (req, res) => {
+  try {
+    const b = req.body || {};
+    if (!b.vid || !b.name) return res.status(400).json({ message: 'Vendor ID and name are required' });
+    const vendor = await Vendor.create(b);
+    res.status(201).json(vendor);
+  } catch (err) {
+    if (err && err.code === 11000) return res.status(409).json({ message: 'A vendor with this ID already exists' });
+    res.status(400).json({ message: err.message });
+  }
+});
+
+router.put('/vendors/:vid', async (req, res) => {
+  try {
+    const vendor = await Vendor.findOneAndUpdate({ vid: req.params.vid }, { $set: req.body || {} }, { new: true, runValidators: true });
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+    res.json(vendor);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+router.delete('/vendors/:vid', async (req, res) => {
+  try {
+    // Block deleting a vendor that still has purchase-order lines.
+    const used = await PurchaseLine.countDocuments({ vid: req.params.vid });
+    if (used > 0) return res.status(409).json({ message: `Vendor has ${used} PO line(s). Remove or reassign them first.` });
+    const vendor = await Vendor.findOneAndDelete({ vid: req.params.vid });
+    if (!vendor) return res.status(404).json({ message: 'Vendor not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+/* ----------------------------- PO lines --------------------------------- */
+router.get('/lines', async (req, res) => {
+  try {
+    const lines = await PurchaseLine.find().sort({ po: 1 });
+    res.json(lines);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/lines', async (req, res) => {
+  try {
+    const b = req.body || {};
+    if (!b.id || !b.po || !b.vid) return res.status(400).json({ message: 'id, PO number and vendor are required' });
+    const line = await PurchaseLine.create(b);
+    res.status(201).json(line);
+  } catch (err) {
+    if (err && err.code === 11000) return res.status(409).json({ message: 'A line with this id already exists' });
+    res.status(400).json({ message: err.message });
+  }
+});
+
+router.put('/lines/:id', async (req, res) => {
+  try {
+    const line = await PurchaseLine.findOneAndUpdate({ id: req.params.id }, { $set: req.body || {} }, { new: true, runValidators: true });
+    if (!line) return res.status(404).json({ message: 'PO line not found' });
+    res.json(line);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+router.delete('/lines/:id', async (req, res) => {
+  try {
+    const line = await PurchaseLine.findOneAndDelete({ id: req.params.id });
+    if (!line) return res.status(404).json({ message: 'PO line not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+module.exports = router;
