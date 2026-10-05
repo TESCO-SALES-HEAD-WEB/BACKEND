@@ -44,6 +44,21 @@ export async function api(path, { method = 'GET', body, auth = false } = {}) {
   return data;
 }
 
+// Lightweight single-lead validation for the manual Lead ID input. Reads ONE lead by its
+// business id (LD-xxxx) — never the whole list. This portal sees every lead, so existence
+// is the only gate. Returns { status: 'ok'|'notfound'|'error', lead }.
+export const validateLeadAccess = async (id) => {
+  const key = String(id || '').trim();
+  if (!key) return { status: 'notfound' };
+  let res;
+  try { res = await fetch(`${API_BASE}/leads/${encodeURIComponent(key)}`); }
+  catch { return { status: 'error' }; }
+  if (res.status === 404) return { status: 'notfound' };
+  if (!res.ok) return { status: 'error' };
+  const d = await res.json().catch(() => null);
+  return (d && d.id) ? { status: 'ok', lead: d } : { status: 'notfound' };
+};
+
 export const notificationsApi = {
   getNotifications: () => api('/notifications'),
   getUnreadCount: () => api('/notifications/unread-count'),

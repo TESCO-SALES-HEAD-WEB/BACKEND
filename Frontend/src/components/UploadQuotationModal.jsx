@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronDown } from 'lucide-react';
-import { api, getUser } from '../api/client';
+import { api, getUser, validateLeadAccess } from '../api/client';
 import { showToast } from '../utils/toast';
 import './CreateVisitModal.css'; // Reusing base modal styles
 import './UploadQuotationModal.css';
-import LeadPicker from './LeadPicker';
+import LeadIdInput from './LeadIdInput';
 
 // Highest numeric suffix across the given quotations (base 5000 so the first id is QT-5001).
 const maxQuoteNum = (rows) => rows.reduce((m, q) => {
@@ -170,13 +170,12 @@ export default function UploadQuotationModal({ isOpen, onClose, onCreated }) {
               {/* Row 1: Lead ID | Client Name */}
               <div className="form-group">
                 <label className="form-label">Lead ID</label>
-                <LeadPicker
-                  placeholder="Select lead"
-                  initialLabel={newQuote.leadId}
-                  fetchPage={({ q, offset, limit }) =>
-                api(`/leads?limit=${limit}&offset=${offset}${q ? `&q=${encodeURIComponent(q)}` : ''}`)
-                  .then((d) => (Array.isArray(d) ? d : [])).catch(() => [])}
-                  onSelect={(lead) => setNewQuote({ ...newQuote, leadId: lead ? lead.id : '', client: lead ? (lead.name || newQuote.client) : newQuote.client })}
+                <LeadIdInput
+                  placeholder="e.g. LD-0001"
+                  value={newQuote.leadId}
+                  validate={validateLeadAccess}
+                  onChange={(id) => setNewQuote({ ...newQuote, leadId: id })}
+                  onResolved={(lead) => { if (lead) setNewQuote({ ...newQuote, leadId: lead.id, client: lead.name || newQuote.client }); }}
                 />
               </div>
 

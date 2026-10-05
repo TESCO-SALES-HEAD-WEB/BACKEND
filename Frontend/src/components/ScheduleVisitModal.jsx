@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, ChevronDown } from 'lucide-react';
-import { api } from '../api/client';
+import { api, validateLeadAccess } from '../api/client';
 import { showToast } from '../utils/toast';
 import './CreateVisitModal.css'; // Reusing base modal styles
 import './ScheduleVisitModal.css';
-import LeadPicker from './LeadPicker';
+import LeadIdInput from './LeadIdInput';
 
 // Convert a 24h "HH:MM" (from a native time input) into 12h "hh:MM AM/PM".
 // Mirrors the Coordinator app so both write appointments in the same format.
@@ -112,17 +112,17 @@ export default function ScheduleVisitModal({ isOpen, onClose, onCreated = () => 
 
           <div className="form-group">
             <label className="form-label">Lead (Customer)</label>
-            <LeadPicker
-              placeholder="Select lead"
-              initialLabel={newVisit.leadId}
-              fetchPage={({ q, offset, limit }) =>
-                api(`/leads?limit=${limit}&offset=${offset}${q ? `&q=${encodeURIComponent(q)}` : ''}`)
-                  .then((d) => (Array.isArray(d) ? d : [])).catch(() => [])}
-              onSelect={(lead) => {
+            <LeadIdInput
+              placeholder="e.g. LD-0001"
+              value={newVisit.leadId}
+              validate={validateLeadAccess}
+              onChange={(id) => setNewVisit({ ...newVisit, leadId: id })}
+              onResolved={(lead) => {
+                if (!lead) return;
                 const assignedMgr = (lead?.manager && String(lead.manager).trim() && String(lead.manager).trim().toLowerCase() !== 'unassigned') ? String(lead.manager).trim() : '';
                 setNewVisit({
                   ...newVisit,
-                  leadId: lead ? lead.id : '',
+                  leadId: lead.id,
                   phone: lead?.phone || newVisit.phone,
                   manager: assignedMgr,
                   status: assignedMgr ? 'Assigned' : 'Waiting',

@@ -1,9 +1,9 @@
 import React from 'react';
 import { X, CreditCard, IndianRupee, ChevronDown } from 'lucide-react';
-import { api } from '../api/client';
+import { api, validateLeadAccess } from '../api/client';
 import { showToast } from '../utils/toast';
 import './RecordPaymentModal.css';
-import LeadPicker from './LeadPicker';
+import LeadIdInput from './LeadIdInput';
 
 const parseAmount = (v) => { const n = parseFloat(String(v ?? '').replace(/[^0-9.]/g, '')); return Number.isNaN(n) ? 0 : n; };
 
@@ -143,13 +143,12 @@ export default function RecordPaymentModal({ isOpen, onClose, payment, onSave = 
             <div className="form-grid-2-col">
               <div className="form-group">
                 <label className="form-label-caps">LEAD ID</label>
-                <LeadPicker
-                  placeholder="Select Lead ID"
-                  initialLabel={form.leadId}
-                  fetchPage={({ q, offset, limit }) =>
-                api(`/leads?limit=${limit}&offset=${offset}${q ? `&q=${encodeURIComponent(q)}` : ''}`)
-                  .then((d) => (Array.isArray(d) ? d : [])).catch(() => [])}
-                  onSelect={(lead) => onLeadSelect(lead)}
+                <LeadIdInput
+                  placeholder="e.g. LD-0001"
+                  value={form.leadId}
+                  validate={validateLeadAccess}
+                  onChange={(id) => set('leadId', id)}
+                  onResolved={(lead) => { if (lead) onLeadSelect(lead); }}
                 />
               </div>
 

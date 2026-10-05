@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ArrowLeft, Plus, X, FileText, Calendar, Settings } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { api } from '../api/client';
+import { api, validateLeadAccess } from '../api/client';
 import { showToast } from '../utils/toast';
-import LeadPicker from '../components/LeadPicker';
+import LeadIdInput from '../components/LeadIdInput';
 
 const parseAmount = (v) => { const n = parseFloat(String(v ?? '').replace(/[^0-9.]/g, '')); return Number.isNaN(n) ? 0 : n; };
 
@@ -279,15 +279,14 @@ export default function NewHandoverForm() {
         <SectionHeader icon={FileText} title="1. Client & Project Details" />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem 1.5rem' }}>
           <Field label="Lead ID" required>
-            <LeadPicker
-              placeholder="Select Lead ID"
+            <LeadIdInput
+              placeholder="e.g. LD-0001"
               disabled={isEdit}
-              initialLabel={form.leadId}
+              value={form.leadId}
               inputStyle={inputStyle}
-              fetchPage={({ q, offset, limit }) =>
-                api(`/leads?limit=${limit}&offset=${offset}${q ? `&q=${encodeURIComponent(q)}` : ''}`)
-                  .then((d) => (Array.isArray(d) ? d : [])).catch(() => [])}
-              onSelect={(lead) => onLeadIdChange(lead)}
+              validate={validateLeadAccess}
+              onChange={(id) => setForm((prev) => ({ ...prev, leadId: id }))}
+              onResolved={(lead) => { if (lead) onLeadIdChange(lead); }}
             />
           </Field>
           <Field label="Client Name" required><input style={inputStyle} required placeholder="e.g. Sree Brindaavan Kindergarten" value={form.clientName} onChange={(e) => set('clientName', e.target.value)} /></Field>
