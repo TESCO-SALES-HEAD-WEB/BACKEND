@@ -166,6 +166,18 @@ router.post('/bulk', async (req, res) => {
   }
 });
 
+// GET /api/leads/:id — a single lead (LD-xxxx or Mongo _id), for fast Lead ID
+// validation. Lightweight (history excluded). 404 when the id does not exist.
+router.get('/:id', async (req, res) => {
+  try {
+    const lead = await Lead.findOne(leadKeyFilter(req.params.id)).select('-history').lean();
+    if (!lead) return res.status(404).json({ message: 'Lead not found' });
+    res.json(lead);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // PUT /api/leads/:id — update one lead (by LD-xxxx id)
 router.put('/:id', async (req, res) => {
   try {
