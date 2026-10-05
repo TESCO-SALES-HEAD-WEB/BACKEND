@@ -3,7 +3,7 @@ import {
   Users, Sparkles, Flame, Thermometer, Snowflake,
   CalendarCheck, FileText, CheckCircle, Trash2, XCircle,
   ChevronDown, Activity, Edit2, Download, Trash, Edit3, Calendar,
-  Phone, CheckCircle2, Clock, X, Search
+  Phone, CheckCircle2, Clock, X, Search, UserX
 } from 'lucide-react';
 import DateRangePicker from '../components/DateRangePicker';
 import ScopeFilter from '../components/ScopeFilter';
@@ -800,6 +800,12 @@ export default function Leads() {
     return [lead.name, lead.company, lead.phone, lead.email, lead.id, lead.location, lead.city, lead.projectType, lead.service, lead.manager]
       .some((v) => String(v || '').toLowerCase().includes(searchQ));
   };
+  const snoMap = (() => {
+    const tm = (l) => { const ms = new Date(l.createdAt || l.date || 0).getTime(); return isNaN(ms) ? 0 : ms; };
+    const m = {};
+    [...leadsData].sort((a, b) => (tm(a) - tm(b)) || String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true })).forEach((l, i) => { m[l.id] = i + 1; });
+    return m;
+  })();
   const filteredLeads = managerLeads.filter(lead => {
     if (!matchesSearch(lead)) return false;
     if (selectedService !== 'All' && String(lead.service || '').toUpperCase() !== selectedService.toUpperCase()) return false;
@@ -850,6 +856,7 @@ export default function Leads() {
   const junkCount = rangeLeads.filter(l => Sx(l.status).includes('junk')).length;
   const lostCount = rangeLeads.filter(l => Sx(l.status).includes('lost')).length;
   const overdueCount = rangeLeads.filter(l => !(l.status || '').toLowerCase().includes('junk') && getFollowUpState(l) === 'overdue').length;
+  const unassignedCount = rangeLeads.filter(l => !l.manager || String(l.manager).toLowerCase() === 'unassigned').length;
 
   return (
     <div className="leads-page">
@@ -909,6 +916,10 @@ export default function Leads() {
             <div className="metric-header"><span className="metric-title">Total Leads</span><Users size={16} /></div>
             <div className="metric-value">{totalLeads}</div><div className="metric-subtitle">All leads in system</div>
           </div>
+          <div className={`metric-card card-indigo ${selectedAssign === 'Unassigned' ? 'active' : ''}`} onClick={() => setSelectedAssign(selectedAssign === 'Unassigned' ? 'All' : 'Unassigned')} style={{ cursor: 'pointer' }}>
+            <div className="metric-header"><span className="metric-title">Unassigned Leads</span><UserX size={16} /></div>
+            <div className="metric-value">{unassignedCount}</div><div className="metric-subtitle">Not yet assigned</div>
+          </div>
           <div className="metric-card card-blue">
             <div className="metric-header"><span className="metric-title">New Leads</span><Sparkles size={16} /></div>
             <div className="metric-value">{newLeadsCount}</div><div className="metric-subtitle">Freshly received</div>
@@ -952,6 +963,7 @@ export default function Leads() {
         <table className="data-table">
           <thead>
             <tr>
+              <th>S.No.</th>
               <th>Date</th>
               <th>Lead ID</th>
               <th>Customer Name</th>
@@ -1058,13 +1070,14 @@ export default function Leads() {
             </tr>
           </thead>
           <tbody className="leads-tbody">
-            {filteredLeads.map((lead) => (
+            {filteredLeads.map((lead, idx) => (
               <tr
                 key={lead.id}
                 className={`lead-row ${selectedLead?.id === lead.id ? 'selected-row' : ''}`}
                 onClick={() => { setSelectedLead(lead); setDrawerTab('specifications'); }}
                 style={{ cursor: 'pointer' }}
               >
+                <td className="text-muted">{snoMap[lead.id] || ''}</td>
                 <td className="text-muted">{lead.date || '-'}</td>
                 <td className="font-medium text-primary">{lead.id}</td>
                 <td className="font-bold">{lead.name}</td>

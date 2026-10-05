@@ -13,7 +13,8 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-reac
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const PRESETS = ['Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'This Month'];
+const PRESETS = ['All Time', 'Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'This Month'];
+const isAllTime = (s, e) => !!(s && e && s.getFullYear() <= 2000 && e.getFullYear() >= 2100);
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const fmt = (date) => {
@@ -51,7 +52,8 @@ export default function DateRangePicker({ onApply } = {}) {
   const applyPreset = (preset) => {
     const today = startOfDay(new Date());
     let s = today, e = today;
-    if (preset === 'Today') { s = today; e = today; }
+    if (preset === 'All Time') { s = new Date(2000, 0, 1); e = new Date(2100, 11, 31); }
+    else if (preset === 'Today') { s = today; e = today; }
     else if (preset === 'Yesterday') { const y = new Date(today); y.setDate(y.getDate() - 1); s = y; e = y; }
     else if (preset === 'Last 7 Days') { const a = new Date(today); a.setDate(a.getDate() - 6); s = a; e = today; }
     else if (preset === 'Last 30 Days') { const a = new Date(today); a.setDate(a.getDate() - 29); s = a; e = today; }
@@ -144,7 +146,7 @@ export default function DateRangePicker({ onApply } = {}) {
         <div style={field} className={openField === 'from' ? 'active' : ''} onClick={() => openCalendar('from')}>
           <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1.2 }}>
             <span style={fieldLabel}>From</span>
-            <span style={fieldValue}>{fmt(startDate)}</span>
+            <span style={fieldValue}>{isAllTime(startDate, endDate) ? 'All time' : fmt(startDate)}</span>
           </span>
           <CalendarIcon size={15} color="#64748B" />
         </div>
@@ -155,7 +157,7 @@ export default function DateRangePicker({ onApply } = {}) {
         <div style={field} className={openField === 'to' ? 'active' : ''} onClick={() => openCalendar('to')}>
           <span style={{ display: 'inline-flex', flexDirection: 'column', lineHeight: 1.2 }}>
             <span style={fieldLabel}>To</span>
-            <span style={fieldValue}>{fmt(endDate)}</span>
+            <span style={fieldValue}>{isAllTime(startDate, endDate) ? 'All time' : fmt(endDate)}</span>
           </span>
           <CalendarIcon size={15} color="#64748B" />
         </div>

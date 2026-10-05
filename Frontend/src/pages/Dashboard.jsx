@@ -4,7 +4,7 @@ import {
   CalendarCheck, FileText, CheckCircle, Trash2, XCircle,
   CalendarDays, CheckCircle2, Flag,
   FileSignature, Clock, Send, ThumbsUp,
-  AlertCircle, Activity, Archive, FileArchive
+  AlertCircle, Activity, Archive, FileArchive, UserX
 } from 'lucide-react';
 import DateRangePicker from '../components/DateRangePicker';
 import ScopeFilter from '../components/ScopeFilter';
@@ -70,7 +70,7 @@ export default function Dashboard() {
       setLoadError('');
       const safe = (p) => p.then((d) => (Array.isArray(d) ? d : [])).catch(() => null);
       const [ld, ap, qt, pr, pm, mg, co] = await Promise.all([
-        safe(api('/leads')), safe(api('/appointments')), safe(api('/quotations')), safe(api('/projects')), safe(api('/payments')),
+        safe(api('/leads?light=1')), safe(api('/appointments')), safe(api('/quotations')), safe(api('/projects')), safe(api('/payments')),
         safe(api('/auth/managers')), safe(api(`/users?role=${encodeURIComponent('Sales Coordinator')}`)),
       ]);
       if (ld === null && ap === null && qt === null && pm === null) {
@@ -144,6 +144,7 @@ export default function Dashboard() {
     return {
       // leads (status substring — same as both modules)
       totalLeads: fLeads.length,
+      unassigned: fLeads.filter((l) => !l.manager || String(l.manager).trim().toLowerCase() === 'unassigned').length,
       newLeads: countLead((l) => S(l.status).includes('new') || S(l.status).includes('received')),
       hot: countLead((l) => S(l.status).includes('hot')),
       warm: countLead((l) => S(l.status).includes('warm')),
@@ -286,6 +287,7 @@ export default function Dashboard() {
             <h2 className="section-title">Leads Overview</h2>
             <div className="grid-5-col">
               <Card tone="card-grey" title="Total Leads" value={m.totalLeads} subtitle="All leads in system" icon={Users} />
+              <Card tone="card-orange" title="Unassigned Leads" value={m.unassigned} subtitle="Not yet assigned" icon={UserX} />
               <Card tone="card-blue" title="New Leads" value={m.newLeads} subtitle="Freshly received" icon={Sparkles} />
               <Card tone="card-red" title="Hot Leads" value={m.hot} subtitle="High conversion chance" icon={Flame} />
               <Card tone="card-orange" title="Warm Leads" value={m.warm} subtitle="Nurturing in progress" icon={Thermometer} />
