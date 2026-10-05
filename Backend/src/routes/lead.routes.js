@@ -93,6 +93,25 @@ router.post('/intake', verifyApiKey, async (req, res) => {
 // GET /api/leads — all leads
 router.get('/', async (req, res) => {
   try {
+    // Paginated + searchable + scope-filtered mode for fast Lead pickers.
+    // Active ONLY when ?limit is present; the full-list behavior below is unchanged.
+    if (req.query.limit !== undefined) {
+      const lim = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
+      const off = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+      const esc = (x) => String(x).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const filter = {};
+      const term = (req.query.q || '').toString().trim();
+      if (term) { const rx = new RegExp(esc(term), 'i'); filter.$or = [{ id: rx }, { name: rx }, { phone: rx }, { email: rx }]; }
+      const mgr = (req.query.manager || '').toString().trim();
+      if (mgr) filter.manager = new RegExp('^' + esc(mgr) + '$', 'i');
+      const asg = (req.query.assignedTo || '').toString().trim();
+      if (asg) filter.assignedTo = new RegExp('^' + esc(asg) + '$', 'i');
+      const items = await Lead.find(filter)
+        .select('-history')
+        .sort({ createdAt: -1 })
+        .skip(off).limit(lim).lean();
+      return res.json(items);
+    }
     const q = Lead.find();
     if (req.query.light) q.select('-history'); // counts/dashboard don't need history — lighter payload
     const leads = await q.sort({ createdAt: -1 }).lean();
