@@ -336,6 +336,7 @@ export default function Dashboard() {
             <h2 className="section-title border-title">Lead Management</h2>
             <div className="grid-4-col">
               <Card tone="card-purple" title="Total Leads" value={m.totalLeads} subtitle="All leads in scope" icon={Users} />
+              <Card tone="card-orange" title="Unassigned Leads" value={m.unassigned} subtitle="Not yet assigned" icon={UserX} />
               <Card tone="card-blue" title="New Leads" value={m.newLeads} subtitle="Freshly received" icon={Sparkles} />
               <Card tone="card-red" title="Hot Leads" value={m.hot} subtitle="High conversion chance" icon={Flame} />
               <Card tone="card-orange" title="Warm Leads" value={m.warm} subtitle="Nurturing in progress" icon={Thermometer} />
