@@ -93,7 +93,9 @@ router.post('/intake', verifyApiKey, async (req, res) => {
 // GET /api/leads — all leads
 router.get('/', async (req, res) => {
   try {
-    const leads = await Lead.find().sort({ createdAt: -1 });
+    const q = Lead.find();
+    if (req.query.light) q.select('-history'); // counts/dashboard don't need history — lighter payload
+    const leads = await q.sort({ createdAt: -1 }).lean();
     res.json(leads);
   } catch (err) {
     res.status(500).json({ message: err.message });
