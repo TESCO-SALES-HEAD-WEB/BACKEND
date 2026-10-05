@@ -4,6 +4,7 @@ import { api, getUser } from '../api/client';
 import { showToast } from '../utils/toast';
 import './CreateVisitModal.css'; // Reusing base modal styles
 import './UploadQuotationModal.css';
+import LeadPicker from './LeadPicker';
 
 // Highest numeric suffix across the given quotations (base 5000 so the first id is QT-5001).
 const maxQuoteNum = (rows) => rows.reduce((m, q) => {
@@ -169,25 +170,14 @@ export default function UploadQuotationModal({ isOpen, onClose, onCreated }) {
               {/* Row 1: Lead ID | Client Name */}
               <div className="form-group">
                 <label className="form-label">Lead ID</label>
-                <div className="custom-select-wrapper">
-                  <select
-                    className="form-select"
-                    required
-                    value={newQuote.leadId}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const lead = leads.find(l => l.id === val);
-                      setNewQuote({ ...newQuote, leadId: val, client: lead ? (lead.name || newQuote.client) : newQuote.client });
-                    }}
-                  >
-                    <option value="">Select lead</option>
-                    {eligibleLeads.map(l => (
-                      <option key={l.id} value={l.id}>{l.name ? `${l.id} — ${l.name}` : l.id}</option>
-                    ))}
-                    {eligibleLeads.length === 0 && <option value="" disabled>No leads available for a quotation</option>}
-                  </select>
-                  <ChevronDown size={16} className="select-icon" />
-                </div>
+                <LeadPicker
+                  placeholder="Select lead"
+                  initialLabel={newQuote.leadId}
+                  fetchPage={({ q, offset, limit }) =>
+                api(`/leads?limit=${limit}&offset=${offset}${q ? `&q=${encodeURIComponent(q)}` : ''}`)
+                  .then((d) => (Array.isArray(d) ? d : [])).catch(() => [])}
+                  onSelect={(lead) => setNewQuote({ ...newQuote, leadId: lead ? lead.id : '', client: lead ? (lead.name || newQuote.client) : newQuote.client })}
+                />
               </div>
 
               <div className="form-group">

@@ -4,6 +4,7 @@ import { api } from '../api/client';
 import { showToast } from '../utils/toast';
 import './CreateVisitModal.css'; // Reusing base modal styles
 import './ScheduleVisitModal.css';
+import LeadPicker from './LeadPicker';
 
 // Convert a 24h "HH:MM" (from a native time input) into 12h "hh:MM AM/PM".
 // Mirrors the Coordinator app so both write appointments in the same format.
@@ -111,35 +112,23 @@ export default function ScheduleVisitModal({ isOpen, onClose, onCreated = () => 
 
           <div className="form-group">
             <label className="form-label">Lead (Customer)</label>
-            <div className="custom-select-wrapper">
-              <select
-                className="form-select"
-                value={newVisit.leadId}
-                onChange={(e) => {
-                  const lead = leads.find((l) => l.id === e.target.value);
-                  // Auto-fill the manager from the lead's existing assignment. If the lead has
-                  // no manager (Unassigned), leave it blank so a manager can be picked manually.
-                  const assignedMgr = (lead?.manager && String(lead.manager).trim() && String(lead.manager).trim().toLowerCase() !== 'unassigned') ? String(lead.manager).trim() : '';
-                  setNewVisit({
-                    ...newVisit,
-                    leadId: e.target.value,
-                    phone: lead?.phone || newVisit.phone,
-                    manager: assignedMgr,
-                    status: assignedMgr ? 'Assigned' : 'Waiting',
-                  });
-                }}
-                required
-              >
-                <option value="">Select lead</option>
-                {eligibleLeads.map((l) => (
-                  <option key={l.id} value={l.id}>{l.id}{l.name ? ` — ${l.name}` : ''}</option>
-                ))}
-                {eligibleLeads.length === 0 && (
-                  <option value="" disabled>{newVisit.type === 'Visits' ? 'No leads with a completed appointment yet' : 'All leads already have an appointment'}</option>
-                )}
-              </select>
-              <ChevronDown size={16} className="select-icon" />
-            </div>
+            <LeadPicker
+              placeholder="Select lead"
+              initialLabel={newVisit.leadId}
+              fetchPage={({ q, offset, limit }) =>
+                api(`/leads?limit=${limit}&offset=${offset}${q ? `&q=${encodeURIComponent(q)}` : ''}`)
+                  .then((d) => (Array.isArray(d) ? d : [])).catch(() => [])}
+              onSelect={(lead) => {
+                const assignedMgr = (lead?.manager && String(lead.manager).trim() && String(lead.manager).trim().toLowerCase() !== 'unassigned') ? String(lead.manager).trim() : '';
+                setNewVisit({
+                  ...newVisit,
+                  leadId: lead ? lead.id : '',
+                  phone: lead?.phone || newVisit.phone,
+                  manager: assignedMgr,
+                  status: assignedMgr ? 'Assigned' : 'Waiting',
+                });
+              }}
+            />
           </div>
 
           <div className="form-group">

@@ -3,6 +3,7 @@ import { X, CreditCard, IndianRupee, ChevronDown } from 'lucide-react';
 import { api } from '../api/client';
 import { showToast } from '../utils/toast';
 import './RecordPaymentModal.css';
+import LeadPicker from './LeadPicker';
 
 const parseAmount = (v) => { const n = parseFloat(String(v ?? '').replace(/[^0-9.]/g, '')); return Number.isNaN(n) ? 0 : n; };
 
@@ -74,11 +75,10 @@ export default function RecordPaymentModal({ isOpen, onClose, payment, onSave = 
   }, [leads, form.manager]);
 
   // Selecting a Lead ID autofills customer / manager / order value from that lead
-  const onLeadSelect = (val) => {
-    const lead = leads.find((l) => l.id === val);
+  const onLeadSelect = (lead) => {
     setForm((f) => ({
       ...f,
-      leadId: val,
+      leadId: lead ? lead.id : '',
       customer: lead?.name || f.customer,
       manager: lead?.manager || f.manager,
       orderValue: lead?.budget ? parseAmount(lead.budget) : f.orderValue,
@@ -143,16 +143,14 @@ export default function RecordPaymentModal({ isOpen, onClose, payment, onSave = 
             <div className="form-grid-2-col">
               <div className="form-group">
                 <label className="form-label-caps">LEAD ID</label>
-                <div className="custom-select-wrapper">
-                  <select className="form-select" value={form.leadId} onChange={(e) => onLeadSelect(e.target.value)}>
-                    <option value="">Select Lead ID</option>
-                    {eligibleLeads.map((l) => (
-                      <option key={l.id} value={l.id}>{l.name ? `${l.id} — ${l.name}` : l.id}</option>
-                    ))}
-                    {eligibleLeads.length === 0 && <option value="" disabled>No leads available for payment</option>}
-                  </select>
-                  <ChevronDown size={14} className="select-icon" />
-                </div>
+                <LeadPicker
+                  placeholder="Select Lead ID"
+                  initialLabel={form.leadId}
+                  fetchPage={({ q, offset, limit }) =>
+                api(`/leads?limit=${limit}&offset=${offset}${q ? `&q=${encodeURIComponent(q)}` : ''}`)
+                  .then((d) => (Array.isArray(d) ? d : [])).catch(() => [])}
+                  onSelect={(lead) => onLeadSelect(lead)}
+                />
               </div>
 
               <div className="form-group">

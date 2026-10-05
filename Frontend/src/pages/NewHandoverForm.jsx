@@ -3,6 +3,7 @@ import { ArrowLeft, Plus, X, FileText, Calendar, Settings } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { showToast } from '../utils/toast';
+import LeadPicker from '../components/LeadPicker';
 
 const parseAmount = (v) => { const n = parseFloat(String(v ?? '').replace(/[^0-9.]/g, '')); return Number.isNaN(n) ? 0 : n; };
 
@@ -183,11 +184,10 @@ export default function NewHandoverForm() {
   const fmtNum = (n) => Number(n.toFixed(2)).toLocaleString('en-IN');
 
   // Selecting a Lead ID autofills the client/project details from that lead
-  const onLeadIdChange = (val) => {
-    const lead = leads.find((l) => l.id === val);
+  const onLeadIdChange = (lead) => {
     setForm((prev) => ({
       ...prev,
-      leadId: val,
+      leadId: lead ? lead.id : '',
       clientName: lead?.name || prev.clientName,
       projectLocation: lead?.appointmentLocation || lead?.location || prev.projectLocation,
       typeOfProject: lead?.projectType || prev.typeOfProject,
@@ -279,13 +279,16 @@ export default function NewHandoverForm() {
         <SectionHeader icon={FileText} title="1. Client & Project Details" />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem 1.5rem' }}>
           <Field label="Lead ID" required>
-            <select style={inputStyle} required value={form.leadId} onChange={(e) => onLeadIdChange(e.target.value)} disabled={isEdit}>
-              <option value="">Select Lead ID</option>
-              {leadsForPicker.map((l) => (
-                <option key={l.id} value={l.id}>{l.name ? `${l.id} — ${l.name}` : l.id}</option>
-              ))}
-              {!isEdit && leadsForPicker.length === 0 && <option value="" disabled>No leads with an approved quotation awaiting order confirmation</option>}
-            </select>
+            <LeadPicker
+              placeholder="Select Lead ID"
+              disabled={isEdit}
+              initialLabel={form.leadId}
+              inputStyle={inputStyle}
+              fetchPage={({ q, offset, limit }) =>
+                api(`/leads?limit=${limit}&offset=${offset}${q ? `&q=${encodeURIComponent(q)}` : ''}`)
+                  .then((d) => (Array.isArray(d) ? d : [])).catch(() => [])}
+              onSelect={(lead) => onLeadIdChange(lead)}
+            />
           </Field>
           <Field label="Client Name" required><input style={inputStyle} required placeholder="e.g. Sree Brindaavan Kindergarten" value={form.clientName} onChange={(e) => set('clientName', e.target.value)} /></Field>
           <Field label="Project Location" required><input style={inputStyle} required placeholder="e.g. Chitlapakkam" value={form.projectLocation} onChange={(e) => set('projectLocation', e.target.value)} /></Field>
