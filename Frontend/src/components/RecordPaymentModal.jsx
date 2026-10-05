@@ -61,12 +61,8 @@ export default function RecordPaymentModal({ isOpen, onClose, payment, onSave = 
   // confirmation is completed (lead status "Order Confirmed") AND it has no payment yet.
   // Only ONE payment per lead. When editing, keep the payment's own lead selectable.
   const paidLeadIds = new Set(payments.map((p) => p && p.leadId).filter(Boolean));
-  const eligibleLeads = leads.filter((l) => {
-    if (!l) return false;
-    if (isEdit && l.id === form.leadId) return true;
-    // Lifecycle made independent: payment can be recorded for ANY lead without a payment yet.
-    return !paidLeadIds.has(l.id);
-  });
+  // Dropdown shows ALL leads — payment is independent and multiple payments per lead are allowed.
+  const eligibleLeads = leads.filter((l) => !!l);
 
   // Manager options — start from the app's sales roster, then fold in any manager
   // seen on the leads (so a lead-autofilled manager is always selectable).
@@ -95,10 +91,6 @@ export default function RecordPaymentModal({ isOpen, onClose, payment, onSave = 
     if (!isEdit) {
       if (!form.leadId) {
         showToast('Select a lead to record a payment.', 'error');
-        return;
-      }
-      if (paidLeadIds.has(form.leadId)) {
-        showToast('This lead already has a payment recorded.', 'error');
         return;
       }
     }

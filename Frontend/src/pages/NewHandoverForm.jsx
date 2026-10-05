@@ -126,7 +126,7 @@ export default function NewHandoverForm() {
   //   • eligible = lead has an APPROVED quotation AND has not been order-confirmed yet.
   const leadHasApprovedQuote = (leadId) => quotes.some((q) => q.leadId === leadId && String(q.approvalStatus || '') === 'Approved');
   const leadHasOrder = (leadId) => projects.some((p) => (p.leadId || p.id) === leadId);
-  const eligibleLeads = leads.filter((l) => !leadHasOrder(l.id));
+  const eligibleLeads = leads.filter((l) => l && l.id);
   const leadsForPicker = isEdit ? leads : eligibleLeads;
 
   const setTerm = (i, key, v) => setForm((f) => ({ ...f, paymentTerms: f.paymentTerms.map((t, idx) => (idx === i ? { ...t, [key]: v } : t)) }));

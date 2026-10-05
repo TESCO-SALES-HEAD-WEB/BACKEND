@@ -57,12 +57,8 @@ export default function ScheduleVisitModal({ isOpen, onClose, onCreated = () => 
   const leadHasCompletedAppointment = (x) => { const l = asLead(x); return appointments.some((a) => !isVisitType(a) && isDone(a) && apptMatchesLead(a, l)); };
   const leadHasVisit = (x) => { const l = asLead(x); return appointments.some((a) => isVisitType(a) && apptMatchesLead(a, l)); };
 
-  const eligibleLeads = leads.filter((l) => {
-    if (l.id === newVisit.leadId) return true;
-    // Lifecycle made independent: appointments and visits no longer depend on each other.
-    if (newVisit.type === 'Visits') return !leadHasVisit(l);
-    return !leadHasAppointment(l);
-  });
+  // Dropdown shows ALL leads — appointment & visit are independent, never hidden by existing records.
+  const eligibleLeads = leads.filter((l) => l && l.id);
 
   // A lead that already carries an assigned manager locks the Manager field (read-only);
   // an Unassigned/empty lead lets the coordinator pick a manager manually.
@@ -71,15 +67,6 @@ export default function ScheduleVisitModal({ isOpen, onClose, onCreated = () => 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (newVisit.type === 'Visits') {
-      if (leadHasVisit(newVisit.leadId)) {
-        showToast('This lead already has a visit. Only one visit is allowed per lead.', 'error');
-        return;
-      }
-    } else if (leadHasAppointment(newVisit.leadId)) {
-      showToast('This lead already has an appointment. Only one appointment is allowed per lead.', 'error');
-      return;
-    }
     // Status is derived from the manager assignment: none -> Waiting, manager chosen -> Assigned.
     const payload = {
       ...newVisit,

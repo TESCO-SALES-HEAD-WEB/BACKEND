@@ -92,7 +92,7 @@ export default function UploadQuotationModal({ isOpen, onClose, onCreated }) {
   const leadActiveQuote = (leadId) => quotes.find(q => q.leadId === leadId && String(q.approvalStatus || '') !== 'Rejected');
   // Lifecycle made independent: a quotation can be created for ANY lead with no active
   // (non-rejected) quotation — a completed visit is no longer required.
-  const eligibleLeads = (Array.isArray(leads) ? leads : []).filter((l) => l && l.id && !leadActiveQuote(l.id));
+  const eligibleLeads = (Array.isArray(leads) ? leads : []).filter((l) => l && l.id);
   const leadHasCompletedVisit = (leadOrId) => {
     const id = typeof leadOrId === 'object' && leadOrId !== null ? leadOrId.id : leadOrId;
     return completedRecords.some(a => { const l = resolveLead(a); return l && l.id === id; });
@@ -106,11 +106,6 @@ export default function UploadQuotationModal({ isOpen, onClose, onCreated }) {
   const handleGenerateQuote = async (e) => {
     e.preventDefault();
     if (submitting) return;
-    const active = leadActiveQuote(newQuote.leadId);
-    if (active) {
-      showToast(`This lead already has a ${String(active.approvalStatus).toLowerCase()} quotation (${active.id}). A new one is allowed only after it is rejected.`, 'error');
-      return;
-    }
     if (!newQuote.fileName) {
       showToast('A PDF quotation file is required before uploading.', 'error');
       return;
