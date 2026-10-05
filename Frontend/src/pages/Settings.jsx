@@ -30,13 +30,17 @@ function AccountsManager({ role, label, endpoint }) {
   const [msg, setMsg] = useState(null); // { type, text }
   const [busy, setBusy] = useState(false);
 
-  // Designation is a display-only role label — shown/editable for Manager accounts only.
+  // Designation is a display-only role label — shown/editable for Manager and Purchase accounts.
   const isManager = role === 'Sales Manager';
-  const DESIGNATIONS = ['Manager', 'Business Development Executive'];
+  const isPurchase = base === '/purchase-managers';
+  const showDesignation = isManager || isPurchase;
+  const DESIGNATIONS = isPurchase ? ['Purchase Manager', 'Purchase Head'] : ['Manager', 'Business Development Executive'];
+  const DEFAULT_DESIG = DESIGNATIONS[0];
+  const ALT_DESIG = DESIGNATIONS[1];
 
-  const [form, setForm] = useState({ name: '', email: '', employeeId: '', password: '', confirm: '', designation: 'Manager' });
+  const [form, setForm] = useState({ name: '', email: '', employeeId: '', password: '', confirm: '', designation: DEFAULT_DESIG });
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', email: '', employeeId: '', designation: 'Manager' });
+  const [editForm, setEditForm] = useState({ name: '', email: '', employeeId: '', designation: DEFAULT_DESIG });
   const [pwId, setPwId] = useState(null);
   const [pwForm, setPwForm] = useState({ newPassword: '', confirm: '' });
 
@@ -64,19 +68,19 @@ function AccountsManager({ role, label, endpoint }) {
     if (form.password !== form.confirm) return flash('error', 'Passwords do not match');
     setBusy(true);
     try {
-      await api(base, { method: 'POST', body: { name: form.name, email: form.email, employeeId: form.employeeId, role, password: form.password, ...(isManager ? { designation: form.designation } : {}) } });
+      await api(base, { method: 'POST', body: { name: form.name, email: form.email, employeeId: form.employeeId, role, password: form.password, ...(showDesignation ? { designation: form.designation } : {}) } });
       flash('success', `${label} account created`);
-      setForm({ name: '', email: '', employeeId: '', password: '', confirm: '', designation: 'Manager' });
+      setForm({ name: '', email: '', employeeId: '', password: '', confirm: '', designation: DEFAULT_DESIG });
       load();
     } catch (e) { flash('error', e.message); } finally { setBusy(false); }
   };
 
-  const startEdit = (u) => { setEditingId(u.id); setPwId(null); setEditForm({ name: u.name || '', email: u.email || '', employeeId: u.employeeId || '', designation: u.designation || 'Manager' }); };
+  const startEdit = (u) => { setEditingId(u.id); setPwId(null); setEditForm({ name: u.name || '', email: u.email || '', employeeId: u.employeeId || '', designation: u.designation || DEFAULT_DESIG }); };
   const saveEdit = async (id) => {
     if (!editForm.name.trim() || !editForm.email.trim()) return flash('error', 'Name and email are required');
     setBusy(true);
     try {
-      await api(`${base}/${id}`, { method: 'PUT', body: { name: editForm.name, email: editForm.email, employeeId: editForm.employeeId, ...(isManager ? { designation: editForm.designation } : {}) } });
+      await api(`${base}/${id}`, { method: 'PUT', body: { name: editForm.name, email: editForm.email, employeeId: editForm.employeeId, ...(showDesignation ? { designation: editForm.designation } : {}) } });
       flash('success', 'Account updated');
       setEditingId(null);
       load();
@@ -130,7 +134,7 @@ function AccountsManager({ role, label, endpoint }) {
             <Field label="Full Name"><input className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Enter name" /></Field>
             <Field label="Login Email (username)"><input className="form-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="name@company.com" /></Field>
             <Field label="Employee ID (optional)"><input className="form-input" value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })} placeholder="EMP-..." /></Field>
-            {isManager && (
+            {showDesignation && (
               <Field label="Designation / Role">
                 <select className="form-input" value={form.designation} onChange={(e) => setForm({ ...form, designation: e.target.value })}>
                   {DESIGNATIONS.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -153,16 +157,16 @@ function AccountsManager({ role, label, endpoint }) {
                 <th style={th}>Name</th>
                 <th style={th}>Login Email</th>
                 <th style={th}>Employee ID</th>
-                {isManager && <th style={th}>Designation</th>}
+                {showDesignation && <th style={th}>Designation</th>}
                 <th style={th}>Status</th>
                 <th style={{ ...th, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td style={td} colSpan={isManager ? 6 : 5}>Loading…</td></tr>
+                <tr><td style={td} colSpan={showDesignation ? 6 : 5}>Loading…</td></tr>
               ) : users.length === 0 ? (
-                <tr><td style={{ ...td, textAlign: 'center', color: '#94A3B8', padding: '2rem' }} colSpan={isManager ? 6 : 5}>No {label} accounts yet. Create one above.</td></tr>
+                <tr><td style={{ ...td, textAlign: 'center', color: '#94A3B8', padding: '2rem' }} colSpan={showDesignation ? 6 : 5}>No {label} accounts yet. Create one above.</td></tr>
               ) : (
                 users.map((u) => (
                   <React.Fragment key={u.id}>
@@ -182,7 +186,7 @@ function AccountsManager({ role, label, endpoint }) {
                           ? <input className="form-input" value={editForm.employeeId} onChange={(e) => setEditForm({ ...editForm, employeeId: e.target.value })} placeholder="—" />
                           : (u.employeeId || '—')}
                       </td>
-                      {isManager && (
+                      {showDesignation && (
                         <td style={td}>
                           {editingId === u.id
                             ? <select className="form-input" value={editForm.designation} onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}>
@@ -190,10 +194,10 @@ function AccountsManager({ role, label, endpoint }) {
                               </select>
                             : <span style={{
                                 display: 'inline-block', padding: '0.2rem 0.6rem', borderRadius: 9999, fontSize: '0.72rem', fontWeight: 700,
-                                background: (u.designation === 'Business Development Executive') ? '#E0E7FF' : '#F1F5F9',
-                                color: (u.designation === 'Business Development Executive') ? '#3730A3' : '#334155'
+                                background: (u.designation === ALT_DESIG) ? '#E0E7FF' : '#F1F5F9',
+                                color: (u.designation === ALT_DESIG) ? '#3730A3' : '#334155'
                               }}>
-                                {u.designation || 'Manager'}
+                                {u.designation || DEFAULT_DESIG}
                               </span>}
                         </td>
                       )}
@@ -228,7 +232,7 @@ function AccountsManager({ role, label, endpoint }) {
                     </tr>
                     {pwId === u.id && (
                       <tr>
-                        <td style={{ ...td, background: '#F8FAFC' }} colSpan={isManager ? 6 : 5}>
+                        <td style={{ ...td, background: '#F8FAFC' }} colSpan={showDesignation ? 6 : 5}>
                           <div style={{ display: 'flex', gap: '0.9rem', alignItems: 'end', flexWrap: 'wrap' }}>
                             <Field label={`New Password for ${u.name}`}><input className="form-input" type="password" value={pwForm.newPassword} onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })} placeholder="Min 8 characters" /></Field>
                             <Field label="Confirm Password"><input className="form-input" type="password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} placeholder="Re-enter password" /></Field>
@@ -252,9 +256,9 @@ function AccountsManager({ role, label, endpoint }) {
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('Approval Rules');
 
-  const tabs = ['Approval Rules', 'Manager Accounts', 'Coordinator Accounts', 'Purchase Manager Accounts', 'Roles & Permissions', 'ID Format', 'Notifications', 'Organization', 'Security'];
+  const tabs = ['Approval Rules', 'Manager Accounts', 'Coordinator Accounts', 'Purchase Accounts', 'Roles & Permissions', 'ID Format', 'Notifications', 'Organization', 'Security'];
 
-  const isAccountTab = activeTab === 'Manager Accounts' || activeTab === 'Coordinator Accounts' || activeTab === 'Purchase Manager Accounts';
+  const isAccountTab = activeTab === 'Manager Accounts' || activeTab === 'Coordinator Accounts' || activeTab === 'Purchase Accounts';
 
   return (
     <div className="settings-container">
@@ -283,7 +287,7 @@ export default function Settings() {
 
           {activeTab === 'Manager Accounts' && <AccountsManager role="Sales Manager" label="Manager" />}
           {activeTab === 'Coordinator Accounts' && <AccountsManager role="Sales Coordinator" label="Coordinator" />}
-          {activeTab === 'Purchase Manager Accounts' && <AccountsManager role="Purchase Manager" label="Purchase Manager" endpoint="/purchase-managers" />}
+          {activeTab === 'Purchase Accounts' && <AccountsManager role="Purchase Manager" label="Purchase" endpoint="/purchase-managers" />}
 
           {activeTab === 'Approval Rules' && (
             <div className="settings-section">
