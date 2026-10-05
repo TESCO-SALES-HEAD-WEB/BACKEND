@@ -64,8 +64,8 @@ export default function RecordPaymentModal({ isOpen, onClose, payment, onSave = 
   const eligibleLeads = leads.filter((l) => {
     if (!l) return false;
     if (isEdit && l.id === form.leadId) return true;
-    const orderDone = String(l.status || '').toLowerCase() === 'order confirmed';
-    return orderDone && !paidLeadIds.has(l.id);
+    // Lifecycle made independent: payment can be recorded for ANY lead without a payment yet.
+    return !paidLeadIds.has(l.id);
   });
 
   // Manager options — start from the app's sales roster, then fold in any manager
@@ -99,11 +99,6 @@ export default function RecordPaymentModal({ isOpen, onClose, payment, onSave = 
       }
       if (paidLeadIds.has(form.leadId)) {
         showToast('This lead already has a payment recorded.', 'error');
-        return;
-      }
-      const lead = leads.find((l) => l && l.id === form.leadId);
-      if (lead && String(lead.status || '').toLowerCase() !== 'order confirmed') {
-        showToast('Payment can only be collected after order confirmation is completed.', 'error');
         return;
       }
     }
@@ -162,7 +157,7 @@ export default function RecordPaymentModal({ isOpen, onClose, payment, onSave = 
                     {eligibleLeads.map((l) => (
                       <option key={l.id} value={l.id}>{l.name ? `${l.id} — ${l.name}` : l.id}</option>
                     ))}
-                    {eligibleLeads.length === 0 && <option value="" disabled>No order-confirmed leads awaiting payment</option>}
+                    {eligibleLeads.length === 0 && <option value="" disabled>No leads available for payment</option>}
                   </select>
                   <ChevronDown size={14} className="select-icon" />
                 </div>

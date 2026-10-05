@@ -59,8 +59,9 @@ export default function ScheduleVisitModal({ isOpen, onClose, onCreated = () => 
 
   const eligibleLeads = leads.filter((l) => {
     if (l.id === newVisit.leadId) return true;
-    if (newVisit.type === 'Visits') return leadHasCompletedAppointment(l) && !leadHasVisit(l);
-    return !leadHasAppointment(l) && !leadHasVisit(l);
+    // Lifecycle made independent: appointments and visits no longer depend on each other.
+    if (newVisit.type === 'Visits') return !leadHasVisit(l);
+    return !leadHasAppointment(l);
   });
 
   // A lead that already carries an assigned manager locks the Manager field (read-only);
@@ -70,12 +71,7 @@ export default function ScheduleVisitModal({ isOpen, onClose, onCreated = () => 
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Enforce the strict lifecycle before creating the record (identical to Coordinator).
     if (newVisit.type === 'Visits') {
-      if (!leadHasCompletedAppointment(newVisit.leadId)) {
-        showToast('This lead has no completed appointment yet — complete the appointment first.', 'error');
-        return;
-      }
       if (leadHasVisit(newVisit.leadId)) {
         showToast('This lead already has a visit. Only one visit is allowed per lead.', 'error');
         return;

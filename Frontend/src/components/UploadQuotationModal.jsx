@@ -90,9 +90,9 @@ export default function UploadQuotationModal({ isOpen, onClose, onCreated }) {
   const completedRecords = (Array.isArray(appts) ? appts : []).filter(a => isVisitDone(a));
   // The lead's active (non-rejected) quotation, if any — its existence blocks a new upload.
   const leadActiveQuote = (leadId) => quotes.find(q => q.leadId === leadId && String(q.approvalStatus || '') !== 'Rejected');
-  const eligibleMap = new Map();
-  completedRecords.forEach(a => { const l = resolveLead(a); if (!l || !l.id || leadActiveQuote(l.id) || eligibleMap.has(l.id)) return; eligibleMap.set(l.id, l); });
-  const eligibleLeads = Array.from(eligibleMap.values());
+  // Lifecycle made independent: a quotation can be created for ANY lead with no active
+  // (non-rejected) quotation — a completed visit is no longer required.
+  const eligibleLeads = (Array.isArray(leads) ? leads : []).filter((l) => l && l.id && !leadActiveQuote(l.id));
   const leadHasCompletedVisit = (leadOrId) => {
     const id = typeof leadOrId === 'object' && leadOrId !== null ? leadOrId.id : leadOrId;
     return completedRecords.some(a => { const l = resolveLead(a); return l && l.id === id; });
@@ -106,11 +106,6 @@ export default function UploadQuotationModal({ isOpen, onClose, onCreated }) {
   const handleGenerateQuote = async (e) => {
     e.preventDefault();
     if (submitting) return;
-    // ── Enforce the strict lifecycle before uploading ──
-    if (!leadHasCompletedVisit(newQuote.leadId)) {
-      showToast('This lead has no completed visit yet — complete the site visit first.', 'error');
-      return;
-    }
     const active = leadActiveQuote(newQuote.leadId);
     if (active) {
       showToast(`This lead already has a ${String(active.approvalStatus).toLowerCase()} quotation (${active.id}). A new one is allowed only after it is rejected.`, 'error');
@@ -194,7 +189,7 @@ export default function UploadQuotationModal({ isOpen, onClose, onCreated }) {
                     {eligibleLeads.map(l => (
                       <option key={l.id} value={l.id}>{l.name ? `${l.id} — ${l.name}` : l.id}</option>
                     ))}
-                    {eligibleLeads.length === 0 && <option value="" disabled>No leads with a completed visit awaiting a quotation</option>}
+                    {eligibleLeads.length === 0 && <option value="" disabled>No leads available for a quotation</option>}
                   </select>
                   <ChevronDown size={16} className="select-icon" />
                 </div>
