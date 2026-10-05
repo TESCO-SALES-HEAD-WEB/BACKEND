@@ -124,6 +124,7 @@ const stripBlankAssignment = (l) => {
   const upd = { ...l };
   if (isBlankAssignment(upd.manager)) delete upd.manager;
   if (isBlankAssignment(upd.assignedTo)) delete upd.assignedTo;
+  delete upd.history; // bulk snapshots never modify history — history is append-only via PUT
   return upd;
 };
 
@@ -151,6 +152,13 @@ router.put('/:id', async (req, res) => {
   try {
     const body = { ...req.body };
     delete body._id; delete body.id; // never let a body overwrite the identity fields
+    // history is append-only (never shrink): a history-light client snapshot must not
+    // replace a stored history with a shorter array. Only runs when history is sent.
+    if (Array.isArray(body.history)) {
+      const cur = await Lead.findOne(leadKeyFilter(req.params.id)).select('history').lean();
+      const stored = (cur && Array.isArray(cur.history)) ? cur.history.length : 0;
+      if (body.history.length < stored) delete body.history;
+    }
     const lead = await Lead.findOneAndUpdate(leadKeyFilter(req.params.id), { $set: body }, { new: true });
     if (!lead) return res.status(404).json({ message: 'Lead not found' });
     res.json(lead);

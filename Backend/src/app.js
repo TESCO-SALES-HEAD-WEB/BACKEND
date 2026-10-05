@@ -4,6 +4,11 @@ const routes = require('./routes');
 
 const app = express();
 
+// gzip-compress all API responses (big win for the full leads list over the wire).
+// Defensive require so the server still boots if the module is not installed yet.
+let compression; try { compression = require('compression'); } catch (e) { compression = null; }
+if (compression) app.use(compression());
+
 // Allow the local dev frontends, the Expo mobile app (web + native), and any origins
 // listed in CLIENT_URL (comma-separated).
 const defaultOrigins = [
