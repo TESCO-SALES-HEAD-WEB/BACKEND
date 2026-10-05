@@ -3,6 +3,7 @@
 const router = require('express').Router();
 const User = require('../models/User');
 const { syncUserName } = require('../utils/syncUserName');
+const Lead = require('../models/Lead');
 
 const ALLOWED_ROLES = ['Sales Manager', 'Sales Coordinator', 'Sales Head'];
 
@@ -119,6 +120,44 @@ router.put('/:id/password', async (req, res) => {
     res.json({ success: true, message: 'Password updated' });
   } catch (err) {
     res.status(400).json({ message: err.message });
+  }
+});
+
+
+// POST /api/users/normalize-assignments           — preview only (no writes)
+// POST /api/users/normalize-assignments?apply=1   — apply the corrections
+// Canonicalizes each lead's `manager` / `assignedTo` to the EXACT current active-manager
+// name (fixes case / whitespace / rename drift), matching on the manager's name, email OR
+// employeeId. Any assignment value that matches NO current manager is reported as an
+// `orphan` so it can be re-assigned. Safe + idempotent; existing correct values are untouched.
+router.post('/normalize-assignments', async (req, res) => {
+  try {
+    const apply = String(req.query.apply || '') === '1' || req.body?.apply === true;
+    const mgrs = await User.find({ role: 'Sales Manager', isActive: true }).select('name email employeeId').lean();
+    const norm = (v) => String(v == null ? '' : v).trim().toLowerCase();
+    const keyToName = new Map();
+    for (const m of mgrs) {
+      for (const k of [m.name, m.email, m.employeeId]) { const kn = norm(k); if (kn) keyToName.set(kn, m.name); }
+    }
+    const leads = await Lead.find().select('id manager assignedTo').lean();
+    let canonicalized = 0;
+    const orphans = [];
+    for (const l of leads) {
+      const ops = {};
+      for (const field of ['manager', 'assignedTo']) {
+        const cur = l[field];
+        const cn = norm(cur);
+        if (!cn || cn === 'unassigned') continue;        // genuinely unassigned — leave it
+        const canonical = keyToName.get(cn);
+        if (canonical) { if (canonical !== cur) ops[field] = canonical; }  // drift -> fix
+        else if (field === 'manager') orphans.push({ id: l.id, manager: cur }); // no such manager
+      }
+      if (apply && Object.keys(ops).length) { await Lead.updateOne({ _id: l._id }, { $set: ops }); canonicalized++; }
+      else if (!apply && Object.keys(ops).length) { canonicalized++; }
+    }
+    res.json({ applied: apply, scanned: leads.length, canonicalized, orphanCount: orphans.length, orphans: orphans.slice(0, 100), managers: mgrs.map((m) => m.name) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
