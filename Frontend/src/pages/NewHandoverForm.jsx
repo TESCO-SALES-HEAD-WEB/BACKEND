@@ -89,6 +89,12 @@ export default function NewHandoverForm() {
 
   const [record, setRecord] = useState(null);
   const [leads, setLeads] = useState([]);
+  // Keep the Lead dropdown populated even if the initial load failed (cold start).
+  useEffect(() => {
+    const ll = () => api('/leads').then((d) => { if (Array.isArray(d) && d.length) setLeads(d); }).catch(() => {});
+    const iv = setInterval(ll, 15000);
+    return () => clearInterval(iv);
+  }, []);
   const [quotes, setQuotes] = useState([]);
   const [projects, setProjects] = useState([]);
   const [form, setForm] = useState(() => toForm(null));
