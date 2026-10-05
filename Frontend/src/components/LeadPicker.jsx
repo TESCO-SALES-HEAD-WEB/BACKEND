@@ -7,6 +7,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 // `onSelect(lead)` fires with the chosen lead object (or null when cleared) so the form
 // can autofill exactly as before. Eligibility/permission rules live on the server + parent.
 const LIMIT = 10;
+const TIMEOUT_MS = 12000;
 const labelOf = (l) => (l ? (l.name ? `${l.id} — ${l.name}` : (l.id || '')) : '');
 
 export default function LeadPicker({ fetchPage, onSelect, placeholder = 'Select Lead ID', initialLabel = '', disabled = false, inputStyle }) {
@@ -18,6 +19,7 @@ export default function LeadPicker({ fetchPage, onSelect, placeholder = 'Select 
   const [hasMore, setHasMore] = useState(true);
   const [label, setLabel] = useState(initialLabel);
   const [typing, setTyping] = useState(false);
+  const [err, setErr] = useState(false);
   const boxRef = useRef(null);
   const debRef = useRef(null);
   const reqRef = useRef(0);
@@ -26,16 +28,27 @@ export default function LeadPicker({ fetchPage, onSelect, placeholder = 'Select 
 
   const load = useCallback(async (q, off, append) => {
     const my = ++reqRef.current;
-    setLoading(true);
+    setLoading(true); setErr(false);
     try {
-      const page = await fetchPage({ q: q || '', offset: off, limit: LIMIT });
+      // Race the parent fetch against a timeout so a slow/hung backend can never
+      // leave the dropdown spinning forever.
+      const page = await Promise.race([
+        Promise.resolve(fetchPage({ q: q || '', offset: off, limit: LIMIT })),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), TIMEOUT_MS)),
+      ]);
       if (my !== reqRef.current) return; // a newer request superseded this one
-      const arr = Array.isArray(page) ? page : [];
+      const raw = Array.isArray(page) ? page : [];
+      // Safety net: if the backend ignored ?limit (pagination endpoint not deployed yet)
+      // it returns the WHOLE list. Detect that (far more rows than we asked for), cap it so
+      // the dropdown can't choke rendering thousands of rows, and stop paging. A correctly
+      // paginated response is always <= LIMIT and flows through unchanged.
+      const unpaged = raw.length > LIMIT;
+      const arr = unpaged ? raw.slice(0, LIMIT) : raw;
       setItems((prev) => (append ? [...prev, ...arr] : arr));
-      setHasMore(arr.length === LIMIT);
+      setHasMore(!unpaged && arr.length === LIMIT);
       setOffset(off + arr.length);
     } catch (e) {
-      if (my === reqRef.current) setHasMore(false);
+      if (my === reqRef.current) { setHasMore(false); if (!append) { setItems([]); setErr(true); } }
     } finally {
       if (my === reqRef.current) setLoading(false);
     }
@@ -70,7 +83,7 @@ export default function LeadPicker({ fetchPage, onSelect, placeholder = 'Select 
   };
 
   const pick = (l) => { setLabel(labelOf(l)); setOpen(false); setTyping(false); setQuery(''); if (onSelect) onSelect(l); };
-  const clear = () => { setLabel(''); setQuery(''); setItems([]); setOffset(0); setHasMore(true); if (onSelect) onSelect(null); };
+  const clear = () => { setLabel(''); setQuery(''); setItems([]); setOffset(0); setHasMore(true); setErr(false); if (onSelect) onSelect(null); };
 
   const baseInput = inputStyle || { width: '100%', padding: '0.7rem 0.85rem', borderRadius: 8, border: '1px solid #CBD5E1', outline: 'none', fontSize: '0.9rem', background: '#fff', color: '#0F172A', boxSizing: 'border-box' };
 
@@ -102,8 +115,14 @@ export default function LeadPicker({ fetchPage, onSelect, placeholder = 'Select 
             </div>
           ))}
           {loading && <div style={{ padding: '10px 12px', fontSize: '0.82rem', color: '#64748B' }}>Loading…</div>}
-          {!loading && items.length === 0 && <div style={{ padding: '10px 12px', fontSize: '0.82rem', color: '#94A3B8' }}>No leads found</div>}
-          {!loading && !hasMore && items.length > 0 && <div style={{ padding: '8px 12px', fontSize: '0.72rem', color: '#CBD5E1', textAlign: 'center' }}>— end of list —</div>}
+          {!loading && err && (
+            <div onMouseDown={(e) => { e.preventDefault(); setOffset(0); load(query, 0, false); }}
+              style={{ padding: '10px 12px', fontSize: '0.82rem', color: '#B91C1C', cursor: 'pointer' }}>
+              Couldn’t load leads — tap to retry
+            </div>
+          )}
+          {!loading && !err && items.length === 0 && <div style={{ padding: '10px 12px', fontSize: '0.82rem', color: '#94A3B8' }}>No leads found</div>}
+          {!loading && !err && !hasMore && items.length > 0 && <div style={{ padding: '8px 12px', fontSize: '0.72rem', color: '#CBD5E1', textAlign: 'center' }}>— end of list —</div>}
         </div>
       )}
     </div>
