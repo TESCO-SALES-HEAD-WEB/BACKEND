@@ -147,20 +147,46 @@ const stripBlankAssignment = (l) => {
   return upd;
 };
 
-// POST /api/leads/bulk — upsert leads (sync from frontend state)
+// POST /api/leads/bulk — upsert leads (sync from a portal's whole current list).
+// A whole-array bulk sync is frequently a STALE snapshot, so it is NOT allowed to own two
+// fields that must never silently revert or disappear:
+//   • manager / assignedTo — owned ONLY by the targeted PUT /:id (an explicit re-assign).
+//     Bulk may SEED them when a lead is first created ($setOnInsert) but can never change
+//     an existing lead's assignment. (This is what caused Akash -> Praveenraja reverts.)
+//   • history — APPEND-ONLY. Bulk accepts an incoming history only when it GROWS (or the
+//     lead is brand-new); a shorter/older snapshot can never truncate a saved timeline.
 router.post('/bulk', async (req, res) => {
   try {
     const leads = req.body;
     if (!Array.isArray(leads)) return res.status(400).json({ message: 'Expected an array' });
-    const ops = leads.map(l => ({
-      updateOne: {
-        filter: { id: l.id },
-        update: { $set: stripBlankAssignment(l) },
-        upsert: true
+    const valid = leads.filter((l) => l && l.id);
+    const ids = valid.map((l) => l.id);
+    const existing = ids.length ? await Lead.aggregate([
+      { $match: { id: { $in: ids } } },
+      { $project: { id: 1, hlen: { $size: { $ifNull: ['$history', []] } } } },
+    ]) : [];
+    const hlen = new Map(existing.map((e) => [e.id, e.hlen]));
+    const known = new Set(existing.map((e) => e.id));
+    const ops = valid.map((l) => {
+      const { id, _id, manager, assignedTo, history, ...rest } = l;
+      const set = { ...rest };
+      delete set._id;
+      // History: append-only — only accept it when it is strictly longer than what we
+      // already have (or the lead is new). Never let a stale snapshot shrink it.
+      if (Array.isArray(history) && (!known.has(id) || history.length > (hlen.get(id) || 0))) {
+        set.history = history;
       }
-    }));
+      const update = { $set: set };
+      // Assignment: seed on insert only; an existing lead's assignment is left untouched
+      // (the targeted PUT /:id is the single source of truth for re-assignment).
+      const onInsert = {};
+      if (manager !== undefined) onInsert.manager = manager;
+      if (assignedTo !== undefined) onInsert.assignedTo = assignedTo;
+      if (Object.keys(onInsert).length) update.$setOnInsert = onInsert;
+      return { updateOne: { filter: { id }, update, upsert: true } };
+    });
     if (ops.length) await Lead.bulkWrite(ops);
-    res.json({ success: true, count: leads.length });
+    res.json({ success: true, count: ops.length });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
