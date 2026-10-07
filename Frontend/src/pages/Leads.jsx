@@ -588,15 +588,7 @@ export default function Leads() {
     const inner = `<div class="tsdoc">
   <div class="hdr">
     <div class="logo-wrap">
-      <svg width="42" height="42" viewBox="0 0 42 42" aria-hidden="true">
-        <g fill="#8DC63F">
-          <polygon points="4,30 15,12 21,12 10,30"/>
-          <polygon points="13,30 24,12 30,12 19,30"/>
-          <polygon points="22,30 33,12 39,12 28,30"/>
-        </g>
-        <rect x="4" y="32" width="30" height="3" fill="#4B7A1E"/>
-      </svg>
-      <div class="logo-text"><div class="t1">TESCO</div><div class="t2">STRUCTURES</div></div>
+      <img src="/logo.png" alt="Tesco Structures" style="height:48px;display:block" />
     </div>
     <div class="hdr-email">tescostructures@gmail.com</div>
   </div>
