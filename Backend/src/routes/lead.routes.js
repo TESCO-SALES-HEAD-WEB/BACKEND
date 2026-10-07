@@ -208,7 +208,7 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const body = { ...req.body };
-    delete body._id; delete body.id; // never let a body overwrite the identity fields
+    delete body._id; delete body.id; delete body.createdAt; delete body.updatedAt; delete body.__v; // never let a body overwrite identity / server-managed fields
     // history is append-only (never shrink): a history-light client snapshot must not
     // replace a stored history with a shorter array. Only runs when history is sent.
     if (Array.isArray(body.history)) {
