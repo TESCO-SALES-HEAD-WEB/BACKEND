@@ -170,6 +170,8 @@ const leadToForm = (lead) => {
     status: STATUS_TO_WIZARD[lead.status] || base.status,
     projectValue: base.projectValue || String(lead.budget || '').replace(/[^\d.]/g, ''),
     followUpDate: toDateInput(lead.followUp) || base.followUpDate,
+    expectedStartDate: (lead._wizard && lead._wizard.expectedStartDate) || lead.timeline || base.expectedStartDate,
+    approximateArea: (lead._wizard && lead._wizard.approximateArea) || lead.area || base.approximateArea,
     ocMilestones: Array.isArray(base.ocMilestones) && base.ocMilestones.length ? base.ocMilestones : [{ term: '', percentage: '', value: '' }],
   };
 };
@@ -271,7 +273,8 @@ const AddLeadWizard = ({ isOpen, onClose, onSave, editLead = null, managers = []
       projectType: (form.service === 'Other Service' && form.otherService.trim()) ? form.otherService.trim() : form.service,
       location: form.projectLocation,
       manager: form.assignedManager || 'Unassigned',
-      expectedTimeline: form.expectedTimeline,
+      timeline: form.expectedStartDate,
+      area: form.approximateArea,
       followUp: form.followUpDate || 'Pending',
       status: form.status,
       budget: form.projectValue || form.ocQuotedPrice,
