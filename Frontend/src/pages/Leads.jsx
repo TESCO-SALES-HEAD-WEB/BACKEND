@@ -803,7 +803,7 @@ export default function Leads() {
     [...leadsData].sort((a, b) => (tm(a) - tm(b)) || String(a.id || '').localeCompare(String(b.id || ''), undefined, { numeric: true })).forEach((l, i) => { m[l.id] = i + 1; });
     return m;
   })();
-  const filteredLeads = managerLeads.filter(lead => {
+  const filteredLeads = (selectedAssign === 'Unassigned' ? leadsData : managerLeads).filter(lead => {
     if (!matchesSearch(lead)) return false;
     if (selectedService !== 'All' && String(lead.service || '').toUpperCase() !== selectedService.toUpperCase()) return false;
     if (selectedLeadSource !== 'All' && String(lead.source || '').toUpperCase() !== selectedLeadSource.toUpperCase()) return false;
@@ -853,7 +853,7 @@ export default function Leads() {
   const junkCount = rangeLeads.filter(l => Sx(l.status).includes('junk')).length;
   const lostCount = rangeLeads.filter(l => Sx(l.status).includes('lost')).length;
   const overdueCount = rangeLeads.filter(l => !(l.status || '').toLowerCase().includes('junk') && getFollowUpState(l) === 'overdue').length;
-  const unassignedCount = rangeLeads.filter(l => !l.manager || String(l.manager).toLowerCase() === 'unassigned').length;
+  const unassignedCount = leadsData.filter(l => inSelectedRange(l.date || l.createdAt) && (!l.manager || String(l.manager).toLowerCase() === 'unassigned')).length;
 
   return (
     <div className="leads-page">

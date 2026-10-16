@@ -34,7 +34,7 @@ function AccountsManager({ role, label, endpoint }) {
   const isManager = role === 'Sales Manager';
   const isPurchase = base === '/purchase-managers';
   const showDesignation = isManager || isPurchase;
-  const DESIGNATIONS = isPurchase ? ['Purchase Manager', 'Purchase Head'] : ['Manager', 'Business Development Executive'];
+  const DESIGNATIONS = isPurchase ? ['Purchase Manager', 'Purchase Head', 'Accounts Manager'] : ['Manager', 'Business Development Executive'];
   const DEFAULT_DESIG = DESIGNATIONS[0];
   const ALT_DESIG = DESIGNATIONS[1];
 
@@ -256,9 +256,9 @@ function AccountsManager({ role, label, endpoint }) {
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('Approval Rules');
 
-  const tabs = ['Approval Rules', 'Manager Accounts', 'Coordinator Accounts', 'Purchase Accounts', 'Roles & Permissions', 'ID Format', 'Notifications', 'Organization', 'Security'];
+  const tabs = ['Approval Rules', 'Manager Accounts', 'Coordinator Accounts', 'Procurement Accounts', 'Roles & Permissions', 'ID Format', 'Notifications', 'Organization', 'Security'];
 
-  const isAccountTab = activeTab === 'Manager Accounts' || activeTab === 'Coordinator Accounts' || activeTab === 'Purchase Accounts';
+  const isAccountTab = activeTab === 'Manager Accounts' || activeTab === 'Coordinator Accounts' || activeTab === 'Procurement Accounts';
 
   return (
     <div className="settings-container">
@@ -287,7 +287,7 @@ export default function Settings() {
 
           {activeTab === 'Manager Accounts' && <AccountsManager role="Sales Manager" label="Manager" />}
           {activeTab === 'Coordinator Accounts' && <AccountsManager role="Sales Coordinator" label="Coordinator" />}
-          {activeTab === 'Purchase Accounts' && <AccountsManager role="Purchase Manager" label="Purchase" endpoint="/purchase-managers" />}
+          {activeTab === 'Procurement Accounts' && <AccountsManager role="Purchase Manager" label="Procurement" endpoint="/purchase-managers" />}
 
           {activeTab === 'Approval Rules' && (
             <div className="settings-section">
