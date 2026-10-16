@@ -11,7 +11,7 @@ const purchaseManagerSchema = new mongoose.Schema(
     email: { type: String, required: true, lowercase: true, trim: true, unique: true },
     employeeId: { type: String, trim: true },
     role: { type: String, default: 'purchase_manager' },
-    designation: { type: String, enum: ['Purchase Manager', 'Purchase Head'], default: 'Purchase Manager' }, // display-only label; role stays purchase_manager
+    designation: { type: String, enum: ['Purchase Manager', 'Purchase Head', 'Accounts Manager'], default: 'Purchase Manager' }, // drives the portal access role (Accounts Manager => accounts_manager)
     password: { type: String, required: true, minlength: 6, select: false },
     resetOtp: { type: String, select: false },
     resetOtpExpires: { type: Date, select: false },

@@ -39,7 +39,7 @@ router.post('/', async (req, res) => {
       email: String(email).toLowerCase().trim(),
       employeeId: employeeId ? String(employeeId).trim() : undefined,
       role: 'purchase_manager', // fixed — never taken from the request
-      designation: ['Purchase Manager', 'Purchase Head'].includes(designation) ? designation : 'Purchase Manager',
+      designation: ['Purchase Manager', 'Purchase Head', 'Accounts Manager'].includes(designation) ? designation : 'Purchase Manager',
       password,
     });
     res.status(201).json(safe(user));
@@ -58,7 +58,7 @@ router.put('/:id', async (req, res) => {
     if (name !== undefined) setOps.name = String(name).trim();
     if (email !== undefined) setOps.email = String(email).toLowerCase().trim();
     if (isActive !== undefined) setOps.isActive = !!isActive;
-    if (designation !== undefined && ['Purchase Manager', 'Purchase Head'].includes(designation)) setOps.designation = designation;
+    if (designation !== undefined && ['Purchase Manager', 'Purchase Head', 'Accounts Manager'].includes(designation)) setOps.designation = designation;
     if (employeeId !== undefined) {
       const v = employeeId ? String(employeeId).trim() : '';
       if (v) setOps.employeeId = v; else unsetOps.employeeId = '';
